@@ -106,14 +106,11 @@ export default function ChatPage() {
 
   const handleVoiceInput = useCallback(() => {
     if (isListening) {
-      const text = stopListening();
-      if (text) {
-        handleSendMessage(text);
-      }
+      stopListening();
     } else {
       startListening();
     }
-  }, [isListening, stopListening, startListening, handleSendMessage]);
+  }, [isListening, stopListening, startListening]);
 
   const handleLogout = useCallback(() => {
     logout();

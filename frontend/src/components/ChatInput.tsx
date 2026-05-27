@@ -7,11 +7,29 @@ interface ChatInputProps {
   onVoiceInput: () => void;
   isListening: boolean;
   transcript: string;
+  draftMessage?: string;
+  onDraftApplied?: () => void;
 }
 
-export default function ChatInput({ onSend, loading, onVoiceInput, isListening, transcript }: ChatInputProps) {
+export default function ChatInput({
+  onSend,
+  loading,
+  onVoiceInput,
+  isListening,
+  transcript,
+  draftMessage,
+  onDraftApplied
+}: ChatInputProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (draftMessage) {
+      setInput(draftMessage);
+      onDraftApplied?.();
+      textareaRef.current?.focus();
+    }
+  }, [draftMessage, onDraftApplied]);
 
   useEffect(() => {
     if (transcript) {
