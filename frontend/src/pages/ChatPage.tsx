@@ -5,6 +5,8 @@ import { getHistory, getConversation, deleteConversation, deleteAllConversations
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { useVoice } from '../hooks/useVoice';
+import { useVoiceChat } from '../hooks/useVoiceChat';
+import { useLiveVoice } from '../hooks/useLiveVoice';
 import Sidebar from '../components/Sidebar';
 import ChatArea from '../components/ChatArea';
 
@@ -14,9 +16,6 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const { messages, loading, error, sendMessage, setMessages, activeConversationId } = useChat(activeConversation);
-  const { isListening, isSpeaking, startListening, stopListening, speak, stopSpeaking } = useVoice();
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -36,18 +35,105 @@ export default function ChatPage() {
     }
   }, []);
 
+  const {
+    messages,
+    loading,
+    error,
+    sendMessage,
+    appendVoiceMessages,
+    setConversationId,
+    setMessages,
+    setError,
+    activeConversationId
+  } = useChat(activeConversation);
+
+  const { speak, stopSpeaking, isSpeaking } = useVoice();
+
+  const voiceChat = useVoiceChat({
+    conversationId: activeConversationId,
+    onMessages: appendVoiceMessages,
+    onConversationId: (id) => {
+      setConversationId(id);
+      setActiveConversation(id);
+      void fetchHistory();
+    },
+    onError: setError
+  });
+
+  const liveVoice = useLiveVoice({
+    conversationId: activeConversationId,
+    onTranscript: (text, _language) => {
+      const now = new Date().toISOString();
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `user-live-${Date.now()}`,
+          role: 'user',
+          content: text,
+          createdAt: now
+        }
+      ]);
+    },
+    onAssistantChunk: (chunk, done) => {
+      if (done && !chunk) return;
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant' && last.id.startsWith('ai-live-')) {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: m.content + chunk } : m
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: `ai-live-${Date.now()}`,
+            role: 'assistant' as const,
+            content: chunk,
+            createdAt: new Date().toISOString()
+          }
+        ];
+      });
+    },
+    onAssistantDone: (reply, convId) => {
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant' && last.id.startsWith('ai-live-')) {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: reply } : m
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: `ai-live-${Date.now()}`,
+            role: 'assistant' as const,
+            content: reply,
+            createdAt: new Date().toISOString()
+          }
+        ];
+      });
+      setConversationId(convId);
+      setActiveConversation(convId);
+      void fetchHistory();
+    },
+    onError: setError
+  });
+
   useEffect(() => {
-    fetchHistory();
+    void fetchHistory();
   }, [fetchHistory]);
 
   useEffect(() => {
     if (activeConversationId && activeConversationId !== activeConversation) {
       setActiveConversation(activeConversationId);
-      fetchHistory();
+      void fetchHistory();
     }
   }, [activeConversationId, activeConversation, fetchHistory]);
 
   const handleSelectConversation = useCallback(async (id: string) => {
+    if (liveVoice.isActive) {
+      await liveVoice.stopLiveMode();
+    }
     setActiveConversation(id);
     setSidebarOpen(false);
     try {
@@ -58,13 +144,16 @@ export default function ChatPage() {
     } catch (err) {
       console.error('Failed to load conversation:', err);
     }
-  }, [setMessages]);
+  }, [setMessages, liveVoice]);
 
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = useCallback(async () => {
+    if (liveVoice.isActive) {
+      await liveVoice.stopLiveMode();
+    }
     setActiveConversation(null);
     setMessages([]);
     setSidebarOpen(false);
-  }, [setMessages]);
+  }, [setMessages, liveVoice]);
 
   const handleDeleteConversation = useCallback(async (id: string) => {
     try {
@@ -100,22 +189,26 @@ export default function ChatPage() {
   const handleSendMessage = useCallback(async (content: string) => {
     const newConvId = await sendMessage(content);
     if (newConvId) {
-      fetchHistory();
+      void fetchHistory();
     }
   }, [sendMessage, fetchHistory]);
 
   const handleVoiceInput = useCallback(() => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  }, [isListening, stopListening, startListening]);
+    if (liveVoice.isActive) return;
+    void voiceChat.toggleRecording();
+  }, [voiceChat, liveVoice.isActive]);
 
   const handleLogout = useCallback(() => {
+    void liveVoice.stopLiveMode();
     logout();
     navigate('/login');
-  }, [logout, navigate]);
+  }, [logout, navigate, liveVoice]);
+
+  const voiceBusy =
+    voiceChat.isRecording ||
+    voiceChat.isProcessing ||
+    voiceChat.isSpeaking ||
+    liveVoice.isActive;
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-900 transition-colors duration-200">
@@ -138,11 +231,23 @@ export default function ChatPage() {
         loading={loading}
         error={error}
         onToggleSidebar={() => setSidebarOpen(true)}
-        isListening={isListening}
-        isSpeaking={isSpeaking}
+        isListening={voiceChat.isRecording}
+        isProcessing={voiceChat.isProcessing}
+        isSpeaking={isSpeaking || voiceChat.isSpeaking}
+        voiceDisabled={liveVoice.isActive}
         onVoiceInput={handleVoiceInput}
         onSpeak={speak}
-        onStopSpeaking={stopSpeaking}
+        onStopSpeaking={() => {
+          stopSpeaking();
+          voiceChat.stopSpeaking();
+        }}
+        liveVoiceStatus={liveVoice.status}
+        onLiveVoiceStart={() => void liveVoice.startLiveMode()}
+        onLiveVoiceStop={() => void liveVoice.stopLiveMode()}
+        onLiveVoiceEndTurn={() => void liveVoice.endLiveMode()}
+        onLiveVoiceInterrupt={() => void liveVoice.interrupt()}
+        isLiveProcessing={liveVoice.status === 'processing'}
+        inputDisabled={voiceBusy}
       />
     </div>
   );

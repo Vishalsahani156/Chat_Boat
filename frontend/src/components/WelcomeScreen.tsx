@@ -1,7 +1,7 @@
 import { Sparkles, Code, BookOpen, Lightbulb, MessageSquare } from 'lucide-react';
 
 interface WelcomeScreenProps {
-  onSuggestionClick?: () => void;
+  onSuggestionClick?: (prompt: string) => void;
 }
 
 const suggestions = [
@@ -38,14 +38,14 @@ export default function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps)
 
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">How can I help you today?</h2>
         <p className="text-slate-600 dark:text-dark-400 mb-8">
-          I&apos;m your AI assistant. Type your message below and press send.
+          Type a message, tap the mic for voice (any language), or use Live voice in the header.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {suggestions.map((item, idx) => (
             <button
               key={idx}
-              onClick={() => onSuggestionClick?.()}
+              onClick={() => onSuggestionClick?.(item.prompt)}
               type="button"
               className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 
                 bg-slate-50/80 hover:bg-slate-100 hover:border-slate-300

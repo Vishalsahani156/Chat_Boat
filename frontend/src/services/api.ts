@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApiResponse, AuthResponse, AuthUser, Message } from '../types';
+import { ApiResponse, AuthResponse, AuthUser, Message, VoiceAudioResult } from '../types';
 
 const TOKEN_KEY = 'auth_token';
 
@@ -35,9 +35,13 @@ api.interceptors.response.use(
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       const url = error.config?.url ?? '';
-      if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
+      const isAuthEndpoint =
+        url.includes('/auth/login') ||
+        url.includes('/auth/register') ||
+        url.includes('/auth/me');
+      if (!isAuthEndpoint) {
         clearToken();
-        if (window.location.pathname !== '/login') {
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
           window.location.href = '/login';
         }
       }
@@ -76,6 +80,83 @@ export async function sendMessage(message: string, conversationId?: string) {
   return response.data;
 }
 
+export async function streamMessage(
+  message: string,
+  conversationId: string | undefined,
+  onChunk: (text: string) => void
+): Promise<{ reply: string; conversationId: string } | null> {
+  const token = getToken();
+  let response: Response;
+  try {
+    response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ message, conversationId })
+    });
+  } catch {
+    throw new Error(
+      'Cannot reach the server. Start the backend with npm run dev in the backend folder.'
+    );
+  }
+
+  if (response.status === 401) {
+    clearToken();
+    if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+      window.location.href = '/login';
+    }
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  if (!response.ok) {
+    const err = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new Error(err.message || 'Stream request failed');
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) return null;
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result: { reply: string; conversationId: string } | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const data = JSON.parse(line.slice(6)) as {
+          type: string;
+          text?: string;
+          reply?: string;
+          conversationId?: string;
+          message?: string;
+        };
+        if (data.type === 'chunk' && data.text) {
+          onChunk(data.text);
+        } else if (data.type === 'done' && data.reply && data.conversationId) {
+          result = { reply: data.reply, conversationId: data.conversationId };
+        } else if (data.type === 'error') {
+          throw new Error(data.message || 'Stream failed');
+        }
+      } catch (e) {
+        if (e instanceof SyntaxError) continue;
+        throw e;
+      }
+    }
+  }
+
+  return result;
+}
+
 export async function getHistory() {
   const response = await api.get<ApiResponse<Array<{
     id: string;
@@ -93,6 +174,19 @@ export async function getConversation(id: string) {
     title: string;
     messages: Message[];
   }>>(`/chat/history/${id}`);
+  return response.data;
+}
+
+export async function sendVoiceAudio(blob: Blob, conversationId?: string) {
+  const formData = new FormData();
+  formData.append('audio', blob, 'recording.webm');
+  if (conversationId) {
+    formData.append('conversationId', conversationId);
+  }
+
+  const response = await api.post<ApiResponse<VoiceAudioResult>>('/voice/audio', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
   return response.data;
 }
 

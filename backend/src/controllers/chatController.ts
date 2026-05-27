@@ -37,6 +37,58 @@ export const sendMessage = async (
   }
 };
 
+function chatError(error: unknown, fallback: string): AppError {
+  return error instanceof AppError
+    ? error
+    : new AppError(error instanceof Error ? error.message : fallback, 500);
+}
+
+export const streamMessage = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = requireUserId(req);
+    const { message, conversationId } = req.body;
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    if (typeof res.flushHeaders === "function") {
+      res.flushHeaders();
+    }
+
+    for await (const event of chatService.streamMessage(message, userId, conversationId)) {
+      if (event.type === "chunk") {
+        res.write(`data: ${JSON.stringify({ type: "chunk", text: event.text })}\n\n`);
+      } else {
+        res.write(
+          `data: ${JSON.stringify({
+            type: "done",
+            reply: event.reply,
+            conversationId: event.conversationId,
+          })}\n\n`
+        );
+      }
+    }
+
+    res.end();
+  } catch (error) {
+    if (!res.headersSent) {
+      next(chatError(error, "Failed to stream message"));
+      return;
+    }
+    res.write(
+      `data: ${JSON.stringify({
+        type: "error",
+        message: error instanceof Error ? error.message : "Stream failed",
+      })}\n\n`
+    );
+    res.end();
+  }
+};
+
 export const getHistory = async (
   req: AuthenticatedRequest,
   res: Response,

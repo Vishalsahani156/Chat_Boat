@@ -11,9 +11,15 @@ import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import chatRoutes from "./routes/chatRoutes";
 import authRoutes from "./routes/authRoutes";
+import voiceRoutes from "./routes/voiceRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import * as chatService from "./services/chatService";
+import { attachVoiceHandlers, cleanupVoiceSession } from "./services/geminiLiveService";
 import { verifyAccessToken } from "./utils/jwt";
+import { validateAuthConfig } from "./config/env";
+import prisma from "./config/database";
+
+validateAuthConfig();
 
 /** Production default if CORS_ORIGIN is unset. */
 const defaultProdOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
@@ -73,6 +79,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api", voiceRoutes);
 app.use("/api", chatRoutes);
 
 app.use(errorHandler);
@@ -98,6 +105,8 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   console.log(`Client connected: ${socket.id}`);
+
+  attachVoiceHandlers(socket);
 
   socket.on("sendMessage", async (data: { message: string; conversationId?: string }) => {
     try {
@@ -127,11 +136,23 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    cleanupVoiceSession(socket.id);
     console.log(`Client disconnected: ${socket.id}`);
   });
 });
 
 const PORT = parseInt(process.env.PORT || "5000", 10);
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(
+      `\nPort ${PORT} is already in use. Run "npm run dev" again (it frees the port first), or stop another backend/Docker container on :${PORT}.`
+    );
+    process.exit(1);
+  }
+  console.error(err);
+  process.exit(1);
+});
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
@@ -142,8 +163,9 @@ const gracefulShutdown = (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
   server.close(() => {
     console.log("HTTP server closed");
-    io.close(() => {
+    io.close(async () => {
       console.log("Socket.IO server closed");
+      await prisma.$disconnect();
       process.exit(0);
     });
   });

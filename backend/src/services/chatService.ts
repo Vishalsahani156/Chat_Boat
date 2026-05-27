@@ -70,6 +70,66 @@ export const processMessage = async (
   return { reply, conversationId: convId };
 };
 
+export const streamMessage = async function* (
+  message: string,
+  userId: string,
+  conversationId?: string
+): AsyncGenerator<{ type: "chunk"; text: string } | { type: "done"; reply: string; conversationId: string }> {
+  let convId = conversationId;
+
+  if (!convId) {
+    const title = message.length > 50 ? message.substring(0, 50) + "..." : message;
+    const conversation = await prisma.conversation.create({
+      data: { title, userId },
+    });
+    convId = conversation.id;
+  }
+
+  const existingConversation = await prisma.conversation.findFirst({
+    where: { id: convId, userId },
+  });
+
+  if (!existingConversation) {
+    throw new AppError("Conversation not found", 404);
+  }
+
+  const previousMessages = await prisma.message.findMany({
+    where: { conversationId: convId },
+    orderBy: { createdAt: "asc" },
+    take: 10,
+    select: { role: true, content: true },
+  });
+
+  const history: MessageHistory[] = previousMessages.map((msg) => ({
+    role: msg.role,
+    content: msg.content,
+  }));
+
+  let fullReply = "";
+  for await (const chunk of geminiService.generateResponseStream(message, history)) {
+    fullReply += chunk;
+    yield { type: "chunk", text: chunk };
+  }
+
+  await prisma.$transaction([
+    prisma.message.create({
+      data: { role: "user", content: message, conversationId: convId },
+    }),
+    prisma.message.create({
+      data: { role: "assistant", content: fullReply, conversationId: convId },
+    }),
+    prisma.conversation.update({
+      where: { id: convId },
+      data: { updatedAt: new Date() },
+    }),
+    prisma.chat.create({
+      data: { userMessage: message, aiReply: fullReply },
+    }),
+  ]);
+
+  yield { type: "done", reply: fullReply, conversationId: convId };
+};
+
 export const getConversations = async (userId: string) => {
   const conversations = await prisma.conversation.findMany({
     where: { userId },

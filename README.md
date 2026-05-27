@@ -6,7 +6,9 @@ A full-stack AI-powered chatbot application built with React, Express, and Googl
 
 - AI-powered chatbot with Google Gemini integration
 - Real-time messaging with Socket.io
-- Voice input (Speech-to-Text) and voice output (Text-to-Speech)
+- Push-to-talk voice (any language): record audio → Gemini STT → AI reply → TTS playback
+- Live voice mode via Socket.IO (streamed text + spoken reply)
+- Streaming text chat (SSE) for ChatGPT-style incremental replies
 - Chat history stored in PostgreSQL
 - User authentication (register/login), bcrypt hashed passwords, JWT for APIs and Socket.IO
 - Dark mode support
@@ -98,6 +100,8 @@ The frontend dev server starts at `http://localhost:5173` (or the next free port
 
 **API proxy:** Vite forwards `/api` and `/socket.io` to the backend. By default it uses `PORT` from `backend/.env`, or `http://127.0.0.1:5000` if that file is missing. If you run the API with **Docker Compose** (host port **5000**) but your `backend/.env` has a different `PORT` (e.g. `3000`), create `frontend/.env` from `frontend/.env.example` and set `VITE_DEV_API_TARGET=http://127.0.0.1:5000` so the proxy matches the running API. Otherwise you may see `ECONNREFUSED` in the Vite terminal and HTTP 500 / failed WebSocket handshakes in the browser.
 
+**Port already in use (`EADDRINUSE :::5000`):** Another process is already listening on `5000` — often a previous `npm run dev` in another terminal, or Docker `backend`. Use only one: stop the other tab (`Ctrl+C`) or stop the container. To see what owns the port: `ss -tlnp | grep 5000`. To switch the dev API to another port instead, set `PORT=5001` (example) in `backend/.env` and restart Vite so it re-reads the proxy target; avoid running two backends at once.
+
 ### 4. Open the app
 
 Navigate to [http://localhost:5173](http://localhost:5173) in your browser.
@@ -185,7 +189,7 @@ Update `DATABASE_URL` in your backend environment with the connection string fro
 
 ### Authentication
 
-Register requires **username** (`name`), **email**, and **password**. Password must be at least **8 characters** and include **uppercase**, **lowercase**, and a **number**.
+Register requires **username** (`name`, letters and numbers only, max **12 characters**), **email**, and **password** (**4–8 characters**).
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -206,9 +210,11 @@ All chat routes require the `Authorization: Bearer <jwt>` header. Responses only
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/chat` | Send a message and receive AI response |
+| POST | `/api/chat/stream` | Stream AI response (SSE) |
 | GET | `/api/chat/history` | List all conversations |
 | GET | `/api/chat/history/:id` | Get a single conversation with messages |
-| POST | `/api/voice-chat` | Send voice-transcribed text, get AI response |
+| POST | `/api/voice/audio` | Upload audio (multipart), language-auto STT + AI + TTS |
+| POST | `/api/voice-chat` | Legacy: send pre-transcribed text |
 | DELETE | `/api/chat/history/:id` | Delete a conversation |
 
 ### Health

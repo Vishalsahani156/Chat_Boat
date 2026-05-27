@@ -76,12 +76,12 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   });
 
   if (!user) {
-    throw new AppError("Invalid email or password", 401);
+    throw new AppError("Invalid email", 401);
   }
 
   const isValidPassword = await comparePassword(password, user.password);
   if (!isValidPassword) {
-    throw new AppError("Invalid email or password", 401);
+    throw new AppError("Invalid password", 401);
   }
 
   const token = signAccessToken({ userId: user.id, email: user.email });

@@ -6,6 +6,12 @@ interface ChatInputProps {
   loading: boolean;
   onVoiceInput: () => void;
   isListening: boolean;
+  isProcessing?: boolean;
+  voiceDisabled?: boolean;
+  inputDisabled?: boolean;
+  /** Fills textarea when `prefillKey` changes (welcome suggestions). */
+  prefillText?: string;
+  prefillKey?: number;
 }
 
 function setRef<T>(node: T | null, ref: ForwardedRef<T>) {
@@ -17,11 +23,28 @@ function setRef<T>(node: T | null, ref: ForwardedRef<T>) {
 }
 
 export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInput(
-  { onSend, loading, onVoiceInput, isListening },
+  {
+    onSend,
+    loading,
+    onVoiceInput,
+    isListening,
+    isProcessing = false,
+    voiceDisabled = false,
+    inputDisabled = false,
+    prefillText,
+    prefillKey
+  },
   forwardedRef
 ) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (prefillKey !== undefined && prefillText !== undefined) {
+      setInput(prefillText);
+      textareaRef.current?.focus();
+    }
+  }, [prefillKey, prefillText]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -56,14 +79,21 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
           focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
           <button
             onClick={onVoiceInput}
-            className={`shrink-0 p-2 rounded-lg transition-colors ${
-              isListening
+            disabled={voiceDisabled || loading}
+            className={`shrink-0 p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              isListening || isProcessing
                 ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                 : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200 dark:text-dark-400 dark:hover:text-dark-200 dark:hover:bg-dark-600'
             }`}
-            title={isListening ? 'Stop recording' : 'Voice input'}
+            title={
+              isProcessing
+                ? 'Processing voice...'
+                : isListening
+                  ? 'Stop recording'
+                  : 'Voice input'
+            }
           >
-            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+            {isListening || isProcessing ? <MicOff size={20} /> : <Mic size={20} />}
           </button>
 
           <textarea
@@ -74,16 +104,24 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            disabled={inputDisabled}
+            placeholder={
+              isListening
+                ? 'Listening… tap mic to stop'
+                : isProcessing
+                  ? 'Processing voice…'
+                  : 'Type a message…'
+            }
             rows={1}
             className="flex-1 bg-transparent text-slate-900 placeholder:text-slate-400
               resize-none outline-none text-sm leading-relaxed py-1.5 max-h-40
-              dark:text-dark-100 dark:placeholder:text-dark-400"
+              dark:text-dark-100 dark:placeholder:text-dark-400
+              disabled:opacity-50 disabled:cursor-not-allowed"
           />
 
           <button
             onClick={handleSend}
-            disabled={!input.trim() || loading}
+            disabled={!input.trim() || loading || inputDisabled}
             className="shrink-0 p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600
               text-white disabled:opacity-40 disabled:cursor-not-allowed
               hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
@@ -92,7 +130,7 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
           </button>
         </div>
         <p className="text-xs text-slate-500 dark:text-dark-500 text-center mt-2">
-          Press Enter to send, Shift+Enter for new line
+          Enter to send · Mic for voice (any language) · Live voice in header
         </p>
       </div>
     </div>

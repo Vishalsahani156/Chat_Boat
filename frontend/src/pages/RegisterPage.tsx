@@ -1,9 +1,22 @@
 import { FormEvent, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
-import { useAuth, getAuthErrorMessage } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import { getAuthErrorMessage } from '../utils/authErrors';
 
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const PASSWORD_MIN = 4;
+const PASSWORD_MAX = 8;
+const USERNAME_MAX = 12;
+const EMAIL_MAX = 50;
+const USERNAME_REGEX = /^[a-zA-Z0-9]*$/;
+const MSG_EMAIL_TOO_LONG = 'Please add short email';
+const MSG_PASSWORD_REQUIRED = 'Password field is required.';
+const MSG_PASSWORD_MIN = 'Minimum 4 characters required.';
+const MSG_PASSWORD_MAX = 'Maximum 8 characters allowed.';
+
+function showPopup(message: string) {
+  window.alert(message);
+}
 
 export default function RegisterPage() {
   const { register, isAuthenticated, isLoading } = useAuth();
@@ -18,25 +31,78 @@ export default function RegisterPage() {
     return <Navigate to="/" replace />;
   }
 
+  const handleNameChange = (value: string) => {
+    if (!USERNAME_REGEX.test(value)) {
+      showPopup('Username can only contain letters and numbers.');
+      return;
+    }
+    if (value.length > USERNAME_MAX) {
+      showPopup('Maximum length is 12 characters.');
+      return;
+    }
+    setError(null);
+    setName(value);
+  };
+
+  const handleEmailChange = (value: string) => {
+    if (value.trim().length > EMAIL_MAX) {
+      showPopup(MSG_EMAIL_TOO_LONG);
+      return;
+    }
+    setError(null);
+    setEmail(value);
+  };
+
+  const handlePasswordChange = (value: string) => {
+    if (value.length > PASSWORD_MAX) {
+      showPopup(MSG_PASSWORD_MAX);
+      return;
+    }
+    setError(null);
+    setPassword(value);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 
     const trimmedName = name.trim();
-    if (trimmedName.length < 2 || trimmedName.length > 50) {
-      setError('Username must be between 2 and 50 characters');
+    if (!trimmedName) {
+      showPopup('Username is required.');
+      return;
+    }
+    if (!USERNAME_REGEX.test(trimmedName)) {
+      showPopup('Username can only contain letters and numbers.');
+      return;
+    }
+    if (trimmedName.length > USERNAME_MAX) {
+      showPopup('Maximum length is 12 characters.');
       return;
     }
 
-    if (!PASSWORD_REGEX.test(password)) {
-      setError('Password must be at least 8 characters and include uppercase, lowercase, and a number');
+    const trimmedEmail = email.trim();
+    if (trimmedEmail.length > EMAIL_MAX) {
+      showPopup(MSG_EMAIL_TOO_LONG);
+      return;
+    }
+
+    if (!password) {
+      showPopup(MSG_PASSWORD_REQUIRED);
+      return;
+    }
+    if (password.length < PASSWORD_MIN) {
+      showPopup(MSG_PASSWORD_MIN);
+      return;
+    }
+    if (password.length > PASSWORD_MAX) {
+      showPopup(MSG_PASSWORD_MAX);
       return;
     }
 
     setSubmitting(true);
 
     try {
-      await register(trimmedName, email.trim(), password);
+      await register(trimmedName, trimmedEmail, password);
       navigate('/');
     } catch (err) {
       setError(getAuthErrorMessage(err));
@@ -56,7 +122,7 @@ export default function RegisterPage() {
           <p className="mt-1 text-sm text-slate-600 dark:text-dark-400">Sign up to start chatting</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
               {error}
@@ -71,12 +137,11 @@ export default function RegisterPage() {
               id="name"
               type="text"
               required
-              minLength={2}
-              maxLength={50}
+              maxLength={USERNAME_MAX}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
-              placeholder="Your username"
+              placeholder="Letters & numbers, max 12"
             />
           </div>
 
@@ -89,7 +154,7 @@ export default function RegisterPage() {
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleEmailChange(e.target.value)}
               className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
               placeholder="you@example.com"
             />
@@ -103,11 +168,11 @@ export default function RegisterPage() {
               id="password"
               type="password"
               required
-              minLength={8}
+              maxLength={PASSWORD_MAX}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => handlePasswordChange(e.target.value)}
               className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
-              placeholder="Min 8 chars, upper, lower, number"
+              placeholder="4–8 characters"
             />
           </div>
 

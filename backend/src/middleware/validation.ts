@@ -49,39 +49,91 @@ export const validateRegister = [
     .isString()
     .withMessage("Username must be a string")
     .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage("Username must be between 2 and 50 characters"),
+    .notEmpty()
+    .withMessage("Username is required")
+    .isLength({ max: 12 })
+    .withMessage("Maximum length is 12 characters.")
+    .matches(/^[a-zA-Z0-9]+$/)
+    .withMessage("Username can only contain letters and numbers."),
   body("email")
     .exists({ checkFalsy: true })
     .withMessage("Email is required")
+    .trim()
     .isEmail()
     .withMessage("Valid email is required")
+    .isLength({ max: 50 })
+    .withMessage("Please add short email")
     .normalizeEmail(),
   body("password")
     .exists({ checkFalsy: true })
-    .withMessage("Password is required")
+    .withMessage("Password field is required.")
+    .bail()
     .isString()
-    .withMessage("Password must be a string")
-    .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters")
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage("Password must include uppercase, lowercase, and a number"),
+    .withMessage("Password field is required.")
+    .bail()
+    .notEmpty()
+    .withMessage("Password field is required.")
+    .bail()
+    .isLength({ min: 4 })
+    .withMessage("Minimum 4 characters required.")
+    .bail()
+    .isLength({ max: 8 })
+    .withMessage("Maximum 8 characters allowed."),
   handleValidationErrors,
 ];
+
+const handleLoginValidationErrors = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const mapped = errors.mapped();
+    const emailInvalid = "email" in mapped;
+    const passwordInvalid = "password" in mapped;
+
+    let message: string;
+    if (emailInvalid && passwordInvalid) {
+      message = "Invalid email | Invalid password";
+    } else if (emailInvalid) {
+      message = mapped.email?.msg ?? "Invalid email";
+    } else if (passwordInvalid) {
+      message = mapped.password?.msg ?? "Invalid password";
+    } else {
+      message = errors.array()[0]?.msg ?? "Validation failed";
+    }
+
+    res.status(400).json({ success: false, message });
+    return;
+  }
+  next();
+};
 
 export const validateLogin = [
   body("email")
     .exists({ checkFalsy: true })
-    .withMessage("Email is required")
+    .withMessage("Invalid email")
+    .trim()
     .isEmail()
-    .withMessage("Valid email is required")
+    .withMessage("Invalid email")
+    .isLength({ max: 50 })
+    .withMessage("Please add short email")
     .normalizeEmail(),
   body("password")
     .exists({ checkFalsy: true })
-    .withMessage("Password is required")
+    .withMessage("Password field is required.")
+    .bail()
     .isString()
-    .withMessage("Password must be a string")
+    .withMessage("Password field is required.")
+    .bail()
     .notEmpty()
-    .withMessage("Password cannot be empty"),
-  handleValidationErrors,
+    .withMessage("Password field is required.")
+    .bail()
+    .isLength({ min: 4 })
+    .withMessage("Minimum 4 characters required.")
+    .bail()
+    .isLength({ max: 8 })
+    .withMessage("Maximum 8 characters allowed."),
+  handleLoginValidationErrors,
 ];

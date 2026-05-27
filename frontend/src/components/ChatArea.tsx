@@ -1,11 +1,13 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Menu, Moon, Sun, VolumeX } from 'lucide-react';
 import { Message } from '../types';
 import { useThemeContext } from '../context/ThemeContext';
+import type { LiveVoiceStatus } from '../hooks/useLiveVoice';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 import ChatInput from './ChatInput';
 import WelcomeScreen from './WelcomeScreen';
+import VoiceMode from './VoiceMode';
 
 interface ChatAreaProps {
   messages: Message[];
@@ -14,10 +16,19 @@ interface ChatAreaProps {
   error?: string | null;
   onToggleSidebar: () => void;
   isListening: boolean;
+  isProcessing?: boolean;
   isSpeaking: boolean;
+  voiceDisabled?: boolean;
   onVoiceInput: () => void;
   onSpeak: (text: string) => void;
   onStopSpeaking: () => void;
+  inputDisabled?: boolean;
+  liveVoiceStatus: LiveVoiceStatus;
+  onLiveVoiceStart: () => void;
+  onLiveVoiceStop: () => void;
+  onLiveVoiceEndTurn: () => void;
+  onLiveVoiceInterrupt: () => void;
+  isLiveProcessing?: boolean;
 }
 
 export default function ChatArea({
@@ -27,18 +38,30 @@ export default function ChatArea({
   error,
   onToggleSidebar,
   isListening,
+  isProcessing = false,
   isSpeaking,
+  voiceDisabled = false,
   onVoiceInput,
   onSpeak,
-  onStopSpeaking
+  onStopSpeaking,
+  inputDisabled = false,
+  liveVoiceStatus,
+  onLiveVoiceStart,
+  onLiveVoiceStop,
+  onLiveVoiceEndTurn,
+  onLiveVoiceInterrupt,
+  isLiveProcessing = false
 }: ChatAreaProps) {
   const { isDark, toggleTheme } = useThemeContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [prefill, setPrefill] = useState<{ key: number; text: string } | null>(null);
+
+  const showTyping = loading || isProcessing || isLiveProcessing;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, showTyping]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-100 dark:bg-dark-900 transition-colors duration-200">
@@ -56,6 +79,13 @@ export default function ChatArea({
         </div>
 
         <div className="flex items-center gap-2">
+          <VoiceMode
+            status={liveVoiceStatus}
+            onStart={onLiveVoiceStart}
+            onStop={onLiveVoiceStop}
+            onEndTurn={onLiveVoiceEndTurn}
+            onInterrupt={onLiveVoiceInterrupt}
+          />
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
@@ -81,15 +111,19 @@ export default function ChatArea({
         </div>
       )}
 
-      {messages.length === 0 ? (
-        <WelcomeScreen onSuggestionClick={() => inputRef.current?.focus()} />
+      {messages.length === 0 && !showTyping ? (
+        <WelcomeScreen
+          onSuggestionClick={(prompt) => {
+            setPrefill({ key: Date.now(), text: prompt });
+          }}
+        />
       ) : (
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <div className="max-w-3xl mx-auto space-y-6">
             {messages.map(msg => (
               <MessageBubble key={msg.id} message={msg} onSpeak={onSpeak} />
             ))}
-            {loading && <TypingIndicator />}
+            {showTyping && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </div>
         </div>
@@ -97,9 +131,14 @@ export default function ChatArea({
 
       <ChatInput
         onSend={onSendMessage}
-        loading={loading}
+        loading={loading || isProcessing}
         onVoiceInput={onVoiceInput}
         isListening={isListening}
+        isProcessing={isProcessing}
+        voiceDisabled={voiceDisabled}
+        inputDisabled={inputDisabled}
+        prefillKey={prefill?.key}
+        prefillText={prefill?.text}
         ref={inputRef}
       />
     </div>

@@ -8,6 +8,7 @@ const router = Router();
 router.use(authenticate);
 
 router.post("/chat", validateChatMessage, chatController.sendMessage);
+router.post("/chat/stream", validateChatMessage, chatController.streamMessage);
 router.get("/chat/history", chatController.getHistory);
 router.delete("/chat/history", chatController.deleteAllConversations);
 router.get("/chat/history/:id", chatController.getConversation);

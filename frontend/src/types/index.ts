@@ -36,3 +36,16 @@ export interface ApiErrorResponse {
   message: string;
   errors?: Array<{ msg: string; path?: string }>;
 }
+
+export interface VoiceAudioPayload {
+  mimeType: string;
+  base64: string;
+}
+
+export interface VoiceAudioResult {
+  transcript: string;
+  reply: string;
+  conversationId: string;
+  detectedLanguage: string;
+  audio?: VoiceAudioPayload;
+}

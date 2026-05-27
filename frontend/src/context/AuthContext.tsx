@@ -1,8 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import axios from 'axios';
 import { AuthUser } from '../types';
 import { getMe, login as apiLogin, register as apiRegister, getToken, setToken, clearToken } from '../services/api';
-import { disconnectSocket } from '../services/socket';
+import { connectSocket, disconnectSocket } from '../services/socket';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -30,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((response) => {
         if (response.success) {
           setUser(response.data.user);
+          connectSocket(token);
         } else {
           clearToken();
         }
@@ -44,18 +44,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await apiLogin(email, password);
-    if (response.success) {
-      setToken(response.data.token);
-      setUser(response.data.user);
+    if (!response.success) {
+      throw new Error('Login failed');
     }
+    setToken(response.data.token);
+    setUser(response.data.user);
+    connectSocket(response.data.token);
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
     const response = await apiRegister(name, email, password);
-    if (response.success) {
-      setToken(response.data.token);
-      setUser(response.data.user);
+    if (!response.success) {
+      throw new Error('Registration failed');
     }
+    setToken(response.data.token);
+    setUser(response.data.user);
+    connectSocket(response.data.token);
   }, []);
 
   const logout = useCallback(() => {
@@ -88,18 +92,3 @@ export function useAuth() {
   return context;
 }
 
-export function getAuthErrorMessage(err: unknown): string {
-  if (axios.isAxiosError(err)) {
-    const data = err.response?.data as { message?: string; errors?: Array<{ msg: string }> } | undefined;
-    if (data?.errors?.length) {
-      return data.errors.map((e) => e.msg).join('. ');
-    }
-    if (typeof data?.message === 'string') {
-      return data.message;
-    }
-  }
-  if (err instanceof Error) {
-    return err.message;
-  }
-  return 'Something went wrong';
-}

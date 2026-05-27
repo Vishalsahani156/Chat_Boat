@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AppError } from "../middleware/errorHandler";
 import { MessageHistory } from "../types";
 
 const getApiKey = (): string => {
@@ -33,14 +34,38 @@ function isQuotaOrRateLimit(error: unknown): boolean {
   );
 }
 
+const QUOTA_MESSAGE =
+  "Gemini quota or rate limit exceeded. Wait a few minutes, send fewer messages, or check usage in Google AI Studio.";
+
+function toGeminiAppError(error: unknown, fallback: string): AppError {
+  if (error instanceof AppError) return error;
+
+  if (error instanceof Error) {
+    if (error.message.includes("GEMINI_API_KEY is not set")) {
+      return new AppError(error.message, 503);
+    }
+    if (error.message.includes("API key")) {
+      return new AppError("Invalid Gemini API key. Check GEMINI_API_KEY in backend/.env.", 503);
+    }
+    if (isQuotaOrRateLimit(error)) {
+      return new AppError(QUOTA_MESSAGE, 429);
+    }
+    return new AppError(error.message || fallback, 500);
+  }
+
+  return new AppError(fallback, 500);
+}
+
 /** Retries when Google returns transient quota / rate errors (helpful on free tier). */
-async function generateContentWithBackoff(prompt: string): Promise<string> {
+async function generateContentWithBackoff(
+  content: string | Parameters<ReturnType<typeof getModel>["generateContent"]>[0]
+): Promise<string> {
   const maxRetries = Math.min(8, Math.max(0, parseInt(process.env.GEMINI_RETRY_MAX || "3", 10)));
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const result = await getModel().generateContent(prompt);
+      const result = await getModel().generateContent(content);
       return result.response.text();
     } catch (err) {
       lastError = err;
@@ -60,6 +85,77 @@ async function generateContentWithBackoff(prompt: string): Promise<string> {
 
 const SYSTEM_PROMPT =
   "You are a helpful AI assistant. Be concise and accurate. Keep responses brief unless asked for detail.";
+
+function parseTranscriptionJson(raw: string): { text: string; language: string } {
+  const trimmed = raw.trim();
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]) as { text?: string; language?: string };
+      return {
+        text: String(parsed.text ?? "").trim(),
+        language: String(parsed.language ?? "en").toLowerCase().slice(0, 5),
+      };
+    } catch {
+      /* fall through */
+    }
+  }
+  return { text: trimmed, language: "en" };
+}
+
+export async function transcribeAudio(
+  audioBuffer: Buffer,
+  mimeType: string
+): Promise<{ text: string; language: string }> {
+  try {
+    const response = await generateContentWithBackoff([
+      {
+        inlineData: {
+          mimeType,
+          data: audioBuffer.toString("base64"),
+        },
+      },
+      {
+        text: `Transcribe the spoken audio exactly. Detect the language automatically.
+Reply with JSON only, no markdown: {"text":"<transcription>","language":"<ISO 639-1 code e.g. en, hi, ta>"}`,
+      },
+    ]);
+    return parseTranscriptionJson(response);
+  } catch (error) {
+    console.error("Gemini transcription error:", error);
+    throw toGeminiAppError(error, "Failed to transcribe audio. Please try again.");
+  }
+}
+
+export async function* generateResponseStream(
+  message: string,
+  history: MessageHistory[]
+): AsyncGenerator<string> {
+  const recentHistory = history.slice(-10);
+  const contextLines = recentHistory.map(
+    (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
+  );
+
+  const prompt = [
+    SYSTEM_PROMPT,
+    ...(contextLines.length > 0
+      ? ["", "Previous conversation:", ...contextLines, ""]
+      : [""]),
+    `User: ${message}`,
+    "Assistant:",
+  ].join("\n");
+
+  try {
+    const streamResult = await getModel().generateContentStream(prompt);
+    for await (const chunk of streamResult.stream) {
+      const text = chunk.text();
+      if (text) yield text;
+    }
+  } catch (error) {
+    console.error("Gemini stream error:", error);
+    throw toGeminiAppError(error, "Failed to stream AI response. Please try again.");
+  }
+}
 
 export const generateResponse = async (
   message: string,
@@ -90,21 +186,6 @@ export const generateResponse = async (
     return response;
   } catch (error) {
     console.error("Gemini API error:", error);
-
-    if (error instanceof Error) {
-      if (error.message.includes("GEMINI_API_KEY is not set")) {
-        throw error;
-      }
-      if (error.message.includes("API key")) {
-        throw new Error("Invalid Gemini API key. Please check your configuration.");
-      }
-      if (isQuotaOrRateLimit(error)) {
-        throw new Error(
-          "Gemini quota or rate limit is still exceeded. Wait 5–10 minutes, send fewer messages in a burst, or check usage and billing in Google AI Studio (https://aistudio.google.com/)."
-        );
-      }
-    }
-
-    throw new Error("Failed to generate AI response. Please try again.");
+    throw toGeminiAppError(error, "Failed to generate AI response. Please try again.");
   }
 };
