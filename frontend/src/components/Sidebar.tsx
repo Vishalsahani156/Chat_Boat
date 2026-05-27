@@ -1,4 +1,4 @@
-import { Plus, Trash2, Trash, X, MessageSquare, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Trash, X, MessageSquare, Sparkles, LogOut } from 'lucide-react';
 import { Conversation } from '../types';
 
 interface SidebarProps {
@@ -10,9 +10,12 @@ interface SidebarProps {
   onDeleteAll: () => void;
   isOpen: boolean;
   onClose: () => void;
+  userName?: string;
+  userEmail?: string;
+  onLogout: () => void;
 }
 
-export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onDelete, onDeleteAll, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onDelete, onDeleteAll, isOpen, onClose, userName, userEmail, onLogout }: SidebarProps) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -121,6 +124,26 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
             </button>
           </div>
         )}
+
+        <div className="p-3 border-t border-slate-200 dark:border-dark-700">
+          {userName && (
+            <div className="mb-2 px-2">
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{userName}</p>
+              {userEmail && (
+                <p className="text-xs text-slate-500 dark:text-dark-400 truncate">{userEmail}</p>
+              )}
+            </div>
+          )}
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+              text-sm font-medium text-slate-600 hover:bg-slate-100
+              dark:text-dark-300 dark:hover:bg-dark-700 transition-colors duration-200"
+          >
+            <LogOut size={16} />
+            Sign out
+          </button>
+        </div>
       </aside>
     </>
   );
