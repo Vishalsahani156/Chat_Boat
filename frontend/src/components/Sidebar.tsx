@@ -1,4 +1,4 @@
-import { Plus, Trash2, X, MessageSquare, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Trash, X, MessageSquare, Sparkles } from 'lucide-react';
 import { Conversation } from '../types';
 
 interface SidebarProps {
@@ -7,11 +7,12 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onNewChat: () => void;
   onDelete: (id: string) => void;
+  onDeleteAll: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onDelete, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ conversations, activeId, onSelect, onNewChat, onDelete, onDeleteAll, isOpen, onClose }: SidebarProps) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -106,6 +107,20 @@ export default function Sidebar({ conversations, activeId, onSelect, onNewChat, 
             </div>
           )}
         </div>
+
+        {conversations.length > 0 && (
+          <div className="p-3 border-t border-slate-200 dark:border-dark-700">
+            <button
+              onClick={onDeleteAll}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+                text-sm font-medium text-red-600 hover:bg-red-50
+                dark:text-red-400 dark:hover:bg-red-500/10 transition-colors duration-200"
+            >
+              <Trash size={16} />
+              Clear all chats
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );

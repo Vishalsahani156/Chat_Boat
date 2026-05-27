@@ -137,3 +137,27 @@ export const deleteConversation = async (
     next(new AppError(message, statusCode));
   }
 };
+
+export const deleteAllConversations = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const result = await chatService.deleteAllConversations();
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(
+      error instanceof AppError
+        ? error
+        : new AppError(
+            error instanceof Error ? error.message : "Failed to delete all conversations",
+            500
+          )
+    );
+  }
+};

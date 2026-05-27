@@ -119,3 +119,16 @@ export const deleteConversation = async (id: string) => {
 
   return { message: "Conversation deleted successfully" };
 };
+
+export const deleteAllConversations = async () => {
+  const [conversationResult, chatResult] = await prisma.$transaction([
+    prisma.conversation.deleteMany(),
+    prisma.chat.deleteMany(),
+  ]);
+
+  return {
+    message: "All conversations deleted successfully",
+    deletedCount: conversationResult.count,
+    deletedChatLogs: chatResult.count,
+  };
+};
