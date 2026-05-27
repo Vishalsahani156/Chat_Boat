@@ -1,0 +1,91 @@
+import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { Send, Mic, MicOff, Loader2 } from 'lucide-react';
+
+interface ChatInputProps {
+  onSend: (message: string) => void;
+  loading: boolean;
+  onVoiceInput: () => void;
+  isListening: boolean;
+  transcript: string;
+}
+
+export default function ChatInput({ onSend, loading, onVoiceInput, isListening, transcript }: ChatInputProps) {
+  const [input, setInput] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (transcript) {
+      setInput(transcript);
+    }
+  }, [transcript]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+    }
+  }, [input]);
+
+  const handleSend = () => {
+    const trimmed = input.trim();
+    if (!trimmed || loading) return;
+    onSend(trimmed);
+    setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="border-t border-dark-700 bg-dark-800 p-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-end gap-2 bg-dark-700 border border-dark-600 rounded-xl p-2 
+          focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
+          <button
+            onClick={onVoiceInput}
+            className={`shrink-0 p-2 rounded-lg transition-colors ${
+              isListening
+                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                : 'text-dark-400 hover:text-dark-200 hover:bg-dark-600'
+            }`}
+            title={isListening ? 'Stop recording' : 'Voice input'}
+          >
+            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+          </button>
+
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
+            rows={1}
+            className="flex-1 bg-transparent text-dark-100 placeholder-dark-400 
+              resize-none outline-none text-sm leading-relaxed py-1.5 max-h-40"
+          />
+
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || loading}
+            className="shrink-0 p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600
+              text-white disabled:opacity-40 disabled:cursor-not-allowed
+              hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
+          >
+            {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+          </button>
+        </div>
+        <p className="text-xs text-dark-500 text-center mt-2">
+          Press Enter to send, Shift+Enter for new line
+        </p>
+      </div>
+    </div>
+  );
+}
