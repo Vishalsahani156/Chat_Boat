@@ -41,6 +41,7 @@ export const getHistory = async (
       data: conversations,
     });
   } catch (error) {
+    console.error("getHistory error:", error);
     next(new AppError("Failed to fetch conversation history", 500));
   }
 };
