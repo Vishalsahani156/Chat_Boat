@@ -4,6 +4,7 @@ import { ChatResponse, MessageHistory } from "../types";
 
 export const processMessage = async (
   message: string,
+  userId: string,
   conversationId?: string
 ): Promise<ChatResponse> => {
   let convId = conversationId;
@@ -11,13 +12,13 @@ export const processMessage = async (
   if (!convId) {
     const title = message.length > 50 ? message.substring(0, 50) + "..." : message;
     const conversation = await prisma.conversation.create({
-      data: { title },
+      data: { title, userId },
     });
     convId = conversation.id;
   }
 
-  const existingConversation = await prisma.conversation.findUnique({
-    where: { id: convId },
+  const existingConversation = await prisma.conversation.findFirst({
+    where: { id: convId, userId },
   });
 
   if (!existingConversation) {
@@ -68,8 +69,9 @@ export const processMessage = async (
   return { reply, conversationId: convId };
 };
 
-export const getConversations = async () => {
+export const getConversations = async (userId: string) => {
   const conversations = await prisma.conversation.findMany({
+    where: { userId },
     orderBy: { updatedAt: "desc" },
     include: {
       _count: {
@@ -87,9 +89,9 @@ export const getConversations = async () => {
   }));
 };
 
-export const getConversation = async (id: string) => {
-  const conversation = await prisma.conversation.findUnique({
-    where: { id },
+export const getConversation = async (id: string, userId: string) => {
+  const conversation = await prisma.conversation.findFirst({
+    where: { id, userId },
     include: {
       messages: {
         orderBy: { createdAt: "asc" },
@@ -104,9 +106,9 @@ export const getConversation = async (id: string) => {
   return conversation;
 };
 
-export const deleteConversation = async (id: string) => {
-  const conversation = await prisma.conversation.findUnique({
-    where: { id },
+export const deleteConversation = async (id: string, userId: string) => {
+  const conversation = await prisma.conversation.findFirst({
+    where: { id, userId },
   });
 
   if (!conversation) {
@@ -120,9 +122,9 @@ export const deleteConversation = async (id: string) => {
   return { message: "Conversation deleted successfully" };
 };
 
-export const deleteAllConversations = async () => {
+export const deleteAllConversations = async (userId: string) => {
   const [conversationResult, chatResult] = await prisma.$transaction([
-    prisma.conversation.deleteMany(),
+    prisma.conversation.deleteMany({ where: { userId } }),
     prisma.chat.deleteMany(),
   ]);
 

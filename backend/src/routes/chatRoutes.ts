@@ -1,8 +1,11 @@
 import { Router } from "express";
 import * as chatController from "../controllers/chatController";
+import { authenticate } from "../middleware/auth";
 import { validateChatMessage, validateVoiceChat } from "../middleware/validation";
 
 const router = Router();
+
+router.use(authenticate);
 
 router.post("/chat", validateChatMessage, chatController.sendMessage);
 router.get("/chat/history", chatController.getHistory);

@@ -8,12 +8,13 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String          @id @default(uuid())
+  name          String
+  email         String          @unique
+  password      String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  conversations Conversation[]
 }
 
 model Chat {
@@ -26,9 +27,13 @@ model Chat {
 model Conversation {
   id        String    @id @default(uuid())
   title     String    @default("New Chat")
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 model Message {

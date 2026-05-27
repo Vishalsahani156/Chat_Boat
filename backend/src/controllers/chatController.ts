@@ -1,16 +1,25 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import * as chatService from "../services/chatService";
 import { AppError } from "../middleware/errorHandler";
+import { AuthenticatedRequest } from "../middleware/auth";
+
+function requireUserId(req: AuthenticatedRequest): string {
+  if (!req.user?.userId) {
+    throw new AppError("Authentication required", 401);
+  }
+  return req.user.userId;
+}
 
 export const sendMessage = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = requireUserId(req);
     const { message, conversationId } = req.body;
 
-    const result = await chatService.processMessage(message, conversationId);
+    const result = await chatService.processMessage(message, userId, conversationId);
 
     res.status(200).json({
       success: true,
@@ -29,12 +38,13 @@ export const sendMessage = async (
 };
 
 export const getHistory = async (
-  _req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const conversations = await chatService.getConversations();
+    const userId = requireUserId(req);
+    const conversations = await chatService.getConversations(userId);
 
     res.status(200).json({
       success: true,
@@ -47,18 +57,19 @@ export const getHistory = async (
 };
 
 export const getConversation = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = requireUserId(req);
     const id = req.params.id as string;
 
     if (!id) {
       throw new AppError("Conversation ID is required", 400);
     }
 
-    const conversation = await chatService.getConversation(id);
+    const conversation = await chatService.getConversation(id, userId);
 
     res.status(200).json({
       success: true,
@@ -80,14 +91,15 @@ export const getConversation = async (
 };
 
 export const voiceChat = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = requireUserId(req);
     const { audioText, conversationId } = req.body;
 
-    const result = await chatService.processMessage(audioText, conversationId);
+    const result = await chatService.processMessage(audioText, userId, conversationId);
 
     res.status(200).json({
       success: true,
@@ -106,18 +118,19 @@ export const voiceChat = async (
 };
 
 export const deleteConversation = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = requireUserId(req);
     const id = req.params.id as string;
 
     if (!id) {
       throw new AppError("Conversation ID is required", 400);
     }
 
-    const result = await chatService.deleteConversation(id);
+    const result = await chatService.deleteConversation(id, userId);
 
     res.status(200).json({
       success: true,
@@ -139,12 +152,13 @@ export const deleteConversation = async (
 };
 
 export const deleteAllConversations = async (
-  _req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const result = await chatService.deleteAllConversations();
+    const userId = requireUserId(req);
+    const result = await chatService.deleteAllConversations(userId);
 
     res.status(200).json({
       success: true,
