@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { Message } from '../types';
-import { sendMessage as apiSendMessage } from '../services/api';
+import { sendMessage as apiSendMessage, getToken } from '../services/api';
 import { getSocket, connectSocket, disconnectSocket } from '../services/socket';
 
 export function useChat(conversationId: string | null) {
@@ -14,18 +15,26 @@ export function useChat(conversationId: string | null) {
   }, [conversationId]);
 
   useEffect(() => {
-    connectSocket();
-    const socket = getSocket();
+    const token = getToken();
+    if (!token) return;
 
-    socket.on('newMessage', (data: { role: string; content: string; conversationId: string }) => {
+    connectSocket(token);
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.on('newMessage', (data: {
+      conversationId: string;
+      message: { role: string; content: string };
+    }) => {
       if (data.conversationId === activeConversationId) {
         const msg: Message = {
           id: Date.now().toString(),
-          role: data.role as 'user' | 'assistant',
-          content: data.content,
+          role: data.message.role as 'user' | 'assistant',
+          content: data.message.content,
           createdAt: new Date().toISOString()
         };
         setMessages(prev => [...prev, msg]);
+        setLoading(false);
       }
     });
 
@@ -68,7 +77,12 @@ export function useChat(conversationId: string | null) {
       }
       return null;
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to send message';
+      let message = 'Failed to send message';
+      if (axios.isAxiosError(err) && typeof err.response?.data?.message === 'string') {
+        message = err.response.data.message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
       setError(message);
       return null;
     } finally {

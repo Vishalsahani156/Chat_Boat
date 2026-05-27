@@ -11,6 +11,7 @@ interface ChatAreaProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
   loading: boolean;
+  error?: string | null;
   onToggleSidebar: () => void;
   isListening: boolean;
   transcript: string;
@@ -24,6 +25,7 @@ export default function ChatArea({
   messages,
   onSendMessage,
   loading,
+  error,
   onToggleSidebar,
   isListening,
   transcript,
@@ -40,16 +42,16 @@ export default function ChatArea({
   }, [messages, loading]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-dark-900">
-      <header className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-dark-700 bg-dark-800">
+    <div className="flex-1 flex flex-col h-full bg-slate-100 dark:bg-dark-900 transition-colors duration-200">
+      <header className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white dark:border-dark-700 dark:bg-dark-800">
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleSidebar}
-            className="md:hidden p-2 rounded-lg hover:bg-dark-700 text-dark-300"
+            className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-600 dark:hover:bg-dark-700 dark:text-dark-300"
           >
             <Menu size={20} />
           </button>
-          <h2 className="text-sm font-medium text-dark-200">
+          <h2 className="text-sm font-medium text-slate-800 dark:text-dark-200">
             {messages.length > 0 ? 'Chat' : 'New Chat'}
           </h2>
         </div>
@@ -58,7 +60,7 @@ export default function ChatArea({
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
-              className="p-2 rounded-lg hover:bg-dark-700 text-red-400"
+              className="p-2 rounded-lg hover:bg-slate-100 text-red-600 dark:hover:bg-dark-700 dark:text-red-400"
               title="Stop speaking"
             >
               <VolumeX size={18} />
@@ -66,13 +68,19 @@ export default function ChatArea({
           )}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-dark-700 text-dark-300 transition-colors"
+            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 dark:hover:bg-dark-700 dark:text-dark-300 transition-colors"
             title={isDark ? 'Light mode' : 'Dark mode'}
           >
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
       </header>
+
+      {error && (
+        <div className="mx-4 mt-3 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-800 dark:text-red-300 text-sm">
+          {error}
+        </div>
+      )}
 
       {messages.length === 0 ? (
         <WelcomeScreen onPromptClick={onSendMessage} />

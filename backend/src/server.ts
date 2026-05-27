@@ -1,5 +1,7 @@
 import dotenv from "dotenv";
-dotenv.config();
+import path from "path";
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 import express from "express";
 import cors from "cors";
@@ -8,21 +10,60 @@ import morgan from "morgan";
 import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import chatRoutes from "./routes/chatRoutes";
+import authRoutes from "./routes/authRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import * as chatService from "./services/chatService";
+import { verifyAccessToken } from "./utils/jwt";
+
+/** Production default if CORS_ORIGIN is unset. */
+const defaultProdOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+
+const localhostDevRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const isProduction = process.env.NODE_ENV === "production";
+
+/**
+ * In development, allow any localhost / 127.0.0.1 port so Vite can use 5174+ when 5173 is busy.
+ * In production, use CORS_ORIGIN or defaultProdOrigins.
+ */
+function isOriginAllowed(origin: string | undefined): boolean {
+  const configured =
+    process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+
+  if (!origin) {
+    return !isProduction;
+  }
+
+  if (!isProduction) {
+    if (localhostDevRegex.test(origin)) return true;
+    if (configured.length > 0 && configured.includes(origin)) return true;
+    return false;
+  }
+
+  const allowList = configured.length > 0 ? configured : defaultProdOrigins;
+  return allowList.includes(origin);
+}
 
 const app = express();
 const server = http.createServer(app);
 
 const io = new SocketIOServer(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: (origin, callback) => {
+      callback(null, isOriginAllowed(origin));
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },
 });
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173", credentials: true }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      callback(null, isOriginAllowed(origin));
+    },
+    credentials: true,
+  })
+);
 app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "10mb" }));
@@ -31,15 +72,36 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+app.use("/api/auth", authRoutes);
 app.use("/api", chatRoutes);
 
 app.use(errorHandler);
+
+io.use((socket, next) => {
+  try {
+    const token =
+      (socket.handshake.auth?.token as string | undefined) ||
+      socket.handshake.headers.authorization?.replace(/^Bearer\s+/i, "");
+
+    if (!token) {
+      next(new Error("Authentication required"));
+      return;
+    }
+
+    const payload = verifyAccessToken(token);
+    socket.data.userId = payload.userId;
+    next();
+  } catch {
+    next(new Error("Invalid or expired token"));
+  }
+});
 
 io.on("connection", (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
   socket.on("sendMessage", async (data: { message: string; conversationId?: string }) => {
     try {
+      const userId = socket.data.userId as string;
       const { message, conversationId } = data;
 
       if (!message || typeof message !== "string" || !message.trim()) {
@@ -47,7 +109,7 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const result = await chatService.processMessage(message.trim(), conversationId);
+      const result = await chatService.processMessage(message.trim(), userId, conversationId);
 
       socket.emit("newMessage", {
         conversationId: result.conversationId,

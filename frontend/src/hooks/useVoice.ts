@@ -10,6 +10,7 @@ export function useVoice() {
   const [transcript, setTranscript] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const recognitionRef = useRef<unknown>(null);
+  const transcriptRef = useRef('');
 
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as unknown as Record<string, unknown>).SpeechRecognition ||
@@ -40,6 +41,7 @@ export function useVoice() {
       for (let i = event.resultIndex; i < Object.keys(event.results).length; i++) {
         finalTranscript += event.results[i][0].transcript;
       }
+      transcriptRef.current = finalTranscript;
       setTranscript(finalTranscript);
     };
 
@@ -54,6 +56,7 @@ export function useVoice() {
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
+    transcriptRef.current = '';
     setTranscript('');
   }, []);
 
@@ -62,8 +65,8 @@ export function useVoice() {
       (recognitionRef.current as { stop: () => void }).stop();
     }
     setIsListening(false);
-    return transcript;
-  }, [transcript]);
+    return transcriptRef.current;
+  }, []);
 
   const speak = useCallback((text: string) => {
     if (!window.speechSynthesis) return;

@@ -8,6 +8,7 @@ A full-stack AI-powered chatbot application built with React, Express, and Googl
 - Real-time messaging with Socket.io
 - Voice input (Speech-to-Text) and voice output (Text-to-Speech)
 - Chat history stored in PostgreSQL
+- User authentication (register/login), bcrypt hashed passwords, JWT for APIs and Socket.IO
 - Dark mode support
 - Mobile responsive design
 - Docker containerized deployment
@@ -75,7 +76,7 @@ cd ai-chatbot
 cd backend
 npm install
 cp .env.example .env
-# Edit .env with your GEMINI_API_KEY and DATABASE_URL
+# Edit .env with your GEMINI_API_KEY, DATABASE_URL, and JWT_SECRET (required for auth tokens)
 npx prisma generate
 npx prisma migrate dev --name init
 npm run dev
@@ -93,7 +94,9 @@ npm install
 npm run dev
 ```
 
-The frontend dev server starts at `http://localhost:5173`.
+The frontend dev server starts at `http://localhost:5173` (or the next free port, e.g. `5174`).
+
+**API proxy:** Vite forwards `/api` and `/socket.io` to the backend. By default it uses `PORT` from `backend/.env`, or `http://127.0.0.1:5000` if that file is missing. If you run the API with **Docker Compose** (host port **5000**) but your `backend/.env` has a different `PORT` (e.g. `3000`), create `frontend/.env` from `frontend/.env.example` and set `VITE_DEV_API_TARGET=http://127.0.0.1:5000` so the proxy matches the running API. Otherwise you may see `ECONNREFUSED` in the Vite terminal and HTTP 500 / failed WebSocket handshakes in the browser.
 
 ### 4. Open the app
 
@@ -118,6 +121,25 @@ docker-compose down
 ```
 
 Once running, open [http://localhost](http://localhost) in your browser.
+
+### Backend and Postgres only (Docker)
+
+Keep the database and API in containers; run the UI with `cd frontend && npm run dev` at [http://localhost:5173](http://localhost:5173) (Vite proxies `/api` and `/socket.io` to port 5000).
+
+```bash
+export GEMINI_API_KEY=your-key-here
+docker compose up -d --build postgres backend
+```
+
+API: `http://localhost:5000` — try `GET http://localhost:5000/health`. The container runs `npx prisma migrate deploy` before starting Node.
+
+### Build the backend image only
+
+```bash
+docker build -t chatbot-backend ./backend
+```
+
+Running that image by itself needs a reachable `DATABASE_URL` (for example Postgres on the host using `host.docker.internal` on Docker Desktop).
 
 ### Docker Services
 
@@ -146,6 +168,7 @@ Once running, open [http://localhost](http://localhost) in your browser.
 5. Add environment variables:
    - `DATABASE_URL` - PostgreSQL connection string
    - `GEMINI_API_KEY` - Google Gemini API key
+   - `JWT_SECRET` - Long random string for JWT signing
    - `CORS_ORIGIN` - Frontend URL (e.g., `https://your-app.vercel.app`)
    - `PORT` - `5000`
 
@@ -160,7 +183,25 @@ Update `DATABASE_URL` in your backend environment with the connection string fro
 
 ## API Endpoints
 
+### Authentication
+
+Register requires **username** (`name`), **email**, and **password**. Password must be at least **8 characters** and include **uppercase**, **lowercase**, and a **number**.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | No | Create account; returns `{ user, token }` |
+| POST | `/api/auth/login` | No | Email + password; returns `{ user, token }` |
+| GET | `/api/auth/me` | Yes (`Bearer`) | Current user profile |
+
+Use JWT on subsequent requests:
+
+```http
+Authorization: Bearer <token-from-register-or-login>
+```
+
 ### Chat
+
+All chat routes require the `Authorization: Bearer <jwt>` header. Responses only include **that user’s** conversations.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -178,6 +219,8 @@ Update `DATABASE_URL` in your backend environment with the connection string fro
 
 ### WebSocket Events
 
+The Socket.IO handshake must include a valid JWT: either `auth: { token: '<jwt>' }` or header `Authorization: Bearer <jwt>`.
+
 | Event | Direction | Description |
 |-------|-----------|-------------|
 | `sendMessage` | Client → Server | Send a chat message |
@@ -193,6 +236,8 @@ Update `DATABASE_URL` in your backend environment with the connection string fro
 | `PORT` | Server port | `5000` |
 | `DATABASE_URL` | PostgreSQL connection string | - |
 | `GEMINI_API_KEY` | Google Gemini API key | - |
+| `JWT_SECRET` | Secret key for signing JWTs (required for `/api/auth` and protected routes) | - |
+| `JWT_EXPIRES_IN` | Access token lifetime (e.g. `7d`, `24h`) | `7d` |
 | `CORS_ORIGIN` | Allowed CORS origin | `http://localhost:5173` |
 | `NODE_ENV` | Environment mode | `development` |
 

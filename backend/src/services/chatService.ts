@@ -1,4 +1,5 @@
 import prisma from "../config/database";
+import { AppError } from "../middleware/errorHandler";
 import * as geminiService from "./geminiService";
 import { ChatResponse, MessageHistory } from "../types";
 
@@ -22,7 +23,7 @@ export const processMessage = async (
   });
 
   if (!existingConversation) {
-    throw new Error("Conversation not found");
+    throw new AppError("Conversation not found", 404);
   }
 
   const previousMessages = await prisma.message.findMany({
@@ -100,7 +101,7 @@ export const getConversation = async (id: string, userId: string) => {
   });
 
   if (!conversation) {
-    throw new Error("Conversation not found");
+    throw new AppError("Conversation not found", 404);
   }
 
   return conversation;
@@ -112,7 +113,7 @@ export const deleteConversation = async (id: string, userId: string) => {
   });
 
   if (!conversation) {
-    throw new Error("Conversation not found");
+    throw new AppError("Conversation not found", 404);
   }
 
   await prisma.conversation.delete({
@@ -123,14 +124,10 @@ export const deleteConversation = async (id: string, userId: string) => {
 };
 
 export const deleteAllConversations = async (userId: string) => {
-  const [conversationResult, chatResult] = await prisma.$transaction([
-    prisma.conversation.deleteMany({ where: { userId } }),
-    prisma.chat.deleteMany(),
-  ]);
+  const conversationResult = await prisma.conversation.deleteMany({ where: { userId } });
 
   return {
     message: "All conversations deleted successfully",
     deletedCount: conversationResult.count,
-    deletedChatLogs: chatResult.count,
   };
 };
