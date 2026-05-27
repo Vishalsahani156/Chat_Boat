@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useLayoutEffect, useCallback } from 'react';
 
 export function useTheme() {
   const [isDark, setIsDark] = useState(() => {
@@ -7,7 +7,7 @@ export function useTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     if (isDark) {
       root.classList.add('dark');

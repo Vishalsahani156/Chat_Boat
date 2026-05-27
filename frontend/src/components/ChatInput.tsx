@@ -45,16 +45,17 @@ export default function ChatInput({ onSend, loading, onVoiceInput, isListening, 
   };
 
   return (
-    <div className="border-t border-dark-700 bg-dark-800 p-4">
+    <div className="border-t border-slate-200 bg-white dark:border-dark-700 dark:bg-dark-800 p-4 transition-colors duration-200">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-end gap-2 bg-dark-700 border border-dark-600 rounded-xl p-2 
+        <div className="flex items-end gap-2 bg-slate-50 border border-slate-200 rounded-xl p-2 
+          dark:bg-dark-700 dark:border-dark-600 
           focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
           <button
             onClick={onVoiceInput}
             className={`shrink-0 p-2 rounded-lg transition-colors ${
               isListening
                 ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                : 'text-dark-400 hover:text-dark-200 hover:bg-dark-600'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200 dark:text-dark-400 dark:hover:text-dark-200 dark:hover:bg-dark-600'
             }`}
             title={isListening ? 'Stop recording' : 'Voice input'}
           >
@@ -68,8 +69,9 @@ export default function ChatInput({ onSend, loading, onVoiceInput, isListening, 
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 bg-transparent text-dark-100 placeholder-dark-400 
-              resize-none outline-none text-sm leading-relaxed py-1.5 max-h-40"
+            className="flex-1 bg-transparent text-slate-900 placeholder:text-slate-400
+              resize-none outline-none text-sm leading-relaxed py-1.5 max-h-40
+              dark:text-dark-100 dark:placeholder:text-dark-400"
           />
 
           <button
@@ -82,7 +84,7 @@ export default function ChatInput({ onSend, loading, onVoiceInput, isListening, 
             {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
           </button>
         </div>
-        <p className="text-xs text-dark-500 text-center mt-2">
+        <p className="text-xs text-slate-500 dark:text-dark-500 text-center mt-2">
           Press Enter to send, Shift+Enter for new line
         </p>
       </div>
