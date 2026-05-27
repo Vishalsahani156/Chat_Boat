@@ -16,7 +16,7 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { messages, loading, error, sendMessage, setMessages, activeConversationId } = useChat(activeConversation);
-  const { isListening, transcript, isSpeaking, startListening, stopListening, speak, stopSpeaking } = useVoice();
+  const { isListening, isSpeaking, startListening, stopListening, speak, stopSpeaking } = useVoice();
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -139,7 +139,6 @@ export default function ChatPage() {
         error={error}
         onToggleSidebar={() => setSidebarOpen(true)}
         isListening={isListening}
-        transcript={transcript}
         isSpeaking={isSpeaking}
         onVoiceInput={handleVoiceInput}
         onSpeak={speak}

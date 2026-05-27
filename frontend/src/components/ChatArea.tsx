@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import { Menu, Moon, Sun, VolumeX } from 'lucide-react';
 import { Message } from '../types';
 import { useThemeContext } from '../context/ThemeContext';
@@ -14,7 +14,6 @@ interface ChatAreaProps {
   error?: string | null;
   onToggleSidebar: () => void;
   isListening: boolean;
-  transcript: string;
   isSpeaking: boolean;
   onVoiceInput: () => void;
   onSpeak: (text: string) => void;
@@ -28,7 +27,6 @@ export default function ChatArea({
   error,
   onToggleSidebar,
   isListening,
-  transcript,
   isSpeaking,
   onVoiceInput,
   onSpeak,
@@ -36,15 +34,7 @@ export default function ChatArea({
 }: ChatAreaProps) {
   const { isDark, toggleTheme } = useThemeContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [draftMessage, setDraftMessage] = useState('');
-
-  const handlePromptClick = useCallback((prompt: string) => {
-    setDraftMessage(prompt);
-  }, []);
-
-  const clearDraft = useCallback(() => {
-    setDraftMessage('');
-  }, []);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -92,7 +82,7 @@ export default function ChatArea({
       )}
 
       {messages.length === 0 ? (
-        <WelcomeScreen onPromptClick={handlePromptClick} />
+        <WelcomeScreen onSuggestionClick={() => inputRef.current?.focus()} />
       ) : (
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <div className="max-w-3xl mx-auto space-y-6">
@@ -110,9 +100,7 @@ export default function ChatArea({
         loading={loading}
         onVoiceInput={onVoiceInput}
         isListening={isListening}
-        transcript={transcript}
-        draftMessage={draftMessage}
-        onDraftApplied={clearDraft}
+        ref={inputRef}
       />
     </div>
   );

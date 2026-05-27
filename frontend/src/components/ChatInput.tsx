@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, KeyboardEvent, forwardRef, type ForwardedRef } from 'react';
 import { Send, Mic, MicOff, Loader2 } from 'lucide-react';
 
 interface ChatInputProps {
@@ -6,36 +6,22 @@ interface ChatInputProps {
   loading: boolean;
   onVoiceInput: () => void;
   isListening: boolean;
-  transcript: string;
-  draftMessage?: string;
-  onDraftApplied?: () => void;
 }
 
-export default function ChatInput({
-  onSend,
-  loading,
-  onVoiceInput,
-  isListening,
-  transcript,
-  draftMessage,
-  onDraftApplied
-}: ChatInputProps) {
+function setRef<T>(node: T | null, ref: ForwardedRef<T>) {
+  if (typeof ref === 'function') {
+    ref(node);
+  } else if (ref) {
+    ref.current = node;
+  }
+}
+
+export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInput(
+  { onSend, loading, onVoiceInput, isListening },
+  forwardedRef
+) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (draftMessage) {
-      setInput(draftMessage);
-      onDraftApplied?.();
-      textareaRef.current?.focus();
-    }
-  }, [draftMessage, onDraftApplied]);
-
-  useEffect(() => {
-    if (transcript) {
-      setInput(transcript);
-    }
-  }, [transcript]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -81,7 +67,10 @@ export default function ChatInput({
           </button>
 
           <textarea
-            ref={textareaRef}
+            ref={node => {
+              textareaRef.current = node;
+              setRef(node, forwardedRef);
+            }}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -108,4 +97,4 @@ export default function ChatInput({
       </div>
     </div>
   );
-}
+});
