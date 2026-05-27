@@ -1,0 +1,10 @@
+{
+  "name": "chat-boat",
+  "private": true,
+  "description": "Root helpers only. Run Prisma from backend (v6) — do not use `npx prisma` here or npm will pull Prisma 7.",
+  "scripts": {
+    "prisma:generate": "npm run prisma:generate --prefix backend",
+    "prisma:migrate": "npm run prisma:migrate --prefix backend",
+    "prisma:studio": "npm run prisma:studio --prefix backend"
+  }
+}

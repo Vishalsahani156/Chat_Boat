@@ -81,6 +81,8 @@ npx prisma migrate dev --name init
 npm run dev
 ```
 
+**Important:** Run these Prisma commands **from `backend/`** (or use `npm run prisma:migrate` from the **repo root** — see root `package.json`). If you run `npx prisma` from the repo root, npm may install **Prisma 7**, which errors with *“The datasource property `url` is no longer supported”* (P1012). This project uses **Prisma 6**; the CLI in `backend/node_modules` matches the schema.
+
 The backend server starts at `http://localhost:5000`.
 
 ### 3. Frontend Setup
