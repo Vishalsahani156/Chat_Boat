@@ -103,8 +103,14 @@ export const getHistory = async (
       data: conversations,
     });
   } catch (error) {
-    console.error("getHistory error:", error);
-    next(new AppError("Failed to fetch conversation history", 500));
+    next(
+      error instanceof AppError
+        ? error
+        : new AppError(
+            error instanceof Error ? error.message : "Failed to fetch conversation history",
+            500
+          )
+    );
   }
 };
 
@@ -128,17 +134,14 @@ export const getConversation = async (
       data: conversation,
     });
   } catch (error) {
-    if (error instanceof AppError) {
-      next(error);
-      return;
-    }
-    const message =
-      error instanceof Error && error.message === "Conversation not found"
-        ? error.message
-        : "Failed to fetch conversation";
-    const statusCode =
-      error instanceof Error && error.message === "Conversation not found" ? 404 : 500;
-    next(new AppError(message, statusCode));
+    next(
+      error instanceof AppError
+        ? error
+        : new AppError(
+            error instanceof Error ? error.message : "Failed to fetch conversation",
+            500
+          )
+    );
   }
 };
 
@@ -189,17 +192,14 @@ export const deleteConversation = async (
       data: result,
     });
   } catch (error) {
-    if (error instanceof AppError) {
-      next(error);
-      return;
-    }
-    const message =
-      error instanceof Error && error.message === "Conversation not found"
-        ? error.message
-        : "Failed to delete conversation";
-    const statusCode =
-      error instanceof Error && error.message === "Conversation not found" ? 404 : 500;
-    next(new AppError(message, statusCode));
+    next(
+      error instanceof AppError
+        ? error
+        : new AppError(
+            error instanceof Error ? error.message : "Failed to delete conversation",
+            500
+          )
+    );
   }
 };
 
