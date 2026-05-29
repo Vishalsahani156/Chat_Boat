@@ -7,8 +7,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ai_chatbot
+    # Host port 5433 avoids conflict with local PostgreSQL on 5432.
+    # Backend uses internal network (postgres:5432) — this mapping is only for host tools (psql, Prisma Studio).
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

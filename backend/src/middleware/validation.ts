@@ -64,9 +64,9 @@ export const validateRegister = [
     .notEmpty()
     .withMessage("Username is required")
     .isLength({ max: 12 })
-    .withMessage("Maximum length is 12 characters.")
+    .withMessage("Username cannot exceed 12 characters")
     .matches(/^[a-zA-Z0-9]+$/)
-    .withMessage("Username can only contain letters and numbers."),
+    .withMessage("Username can only contain letters and numbers"),
   body("email")
     .exists({ checkFalsy: true })
     .withMessage("Email is required")
@@ -78,19 +78,19 @@ export const validateRegister = [
     .normalizeEmail(),
   body("password")
     .exists({ checkFalsy: true })
-    .withMessage("Password field is required.")
+    .withMessage("Password is required")
     .bail()
     .isString()
-    .withMessage("Password field is required.")
+    .withMessage("Password is required")
     .bail()
     .notEmpty()
-    .withMessage("Password field is required.")
+    .withMessage("Password is required")
     .bail()
     .isLength({ min: 4 })
-    .withMessage("Minimum 4 characters required.")
+    .withMessage("Password must be at least 4 characters")
     .bail()
     .isLength({ max: 8 })
-    .withMessage("Maximum 8 characters allowed."),
+    .withMessage("Password cannot exceed 8 characters"),
   handleValidationErrors,
 ];
 
@@ -134,18 +134,18 @@ export const validateLogin = [
     .normalizeEmail(),
   body("password")
     .exists({ checkFalsy: true })
-    .withMessage("Password field is required.")
+    .withMessage("Password is required")
     .bail()
     .isString()
-    .withMessage("Password field is required.")
+    .withMessage("Password is required")
     .bail()
     .notEmpty()
-    .withMessage("Password field is required.")
+    .withMessage("Password is required")
     .bail()
     .isLength({ min: 4 })
-    .withMessage("Minimum 4 characters required.")
+    .withMessage("Password must be at least 4 characters")
     .bail()
     .isLength({ max: 8 })
-    .withMessage("Maximum 8 characters allowed."),
+    .withMessage("Password cannot exceed 8 characters"),
   handleLoginValidationErrors,
 ];

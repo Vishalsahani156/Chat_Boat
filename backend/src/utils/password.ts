@@ -7,13 +7,13 @@ const PASSWORD_MAX = 8;
 
 export function validatePassword(password: string): string | null {
   if (!password || password.length === 0) {
-    return "Password field is required.";
+    return "Password is required";
   }
   if (password.length < PASSWORD_MIN) {
-    return "Minimum 4 characters required.";
+    return "Password must be at least 4 characters";
   }
   if (password.length > PASSWORD_MAX) {
-    return "Maximum 8 characters allowed.";
+    return "Password cannot exceed 8 characters";
   }
   return null;
 }

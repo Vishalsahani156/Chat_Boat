@@ -1,44 +1,17 @@
 import { FormEvent, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
+import PasswordInput, { FieldError } from '../components/PasswordInput';
 import { useAuth } from '../context/AuthContext';
 import { getAuthErrorMessage } from '../utils/authErrors';
+import { getEmailValidationError, getPasswordValidationError } from '../utils/passwordValidation';
 
-const PASSWORD_MIN = 4;
-const PASSWORD_MAX = 8;
-const EMAIL_MAX = 50;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const MSG_EMAIL_TOO_LONG = 'Please add short email';
-const MSG_INVALID_EMAIL = 'Invalid email';
-const MSG_PASSWORD_REQUIRED = 'Password field is required.';
-const MSG_PASSWORD_MIN = 'Minimum 4 characters required.';
-const MSG_PASSWORD_MAX = 'Maximum 8 characters allowed.';
-const MSG_BOTH_INVALID = 'Invalid email | Invalid password';
 const MSG_LOGIN_SUCCESS = 'Login Successfully';
+
+type FieldKey = 'email' | 'password';
 
 function showPopup(message: string) {
   window.alert(message);
-}
-
-function getPasswordValidationError(password: string): string | null {
-  if (!password) return MSG_PASSWORD_REQUIRED;
-  if (password.length < PASSWORD_MIN) return MSG_PASSWORD_MIN;
-  if (password.length > PASSWORD_MAX) return MSG_PASSWORD_MAX;
-  return null;
-}
-
-function getLoginValidationError(email: string, password: string): string | null {
-  const trimmedEmail = email.trim();
-  const emailTooLong = trimmedEmail.length > EMAIL_MAX;
-  const emailInvalid = !EMAIL_REGEX.test(trimmedEmail);
-  const passwordError = getPasswordValidationError(password);
-
-  if (emailTooLong) return MSG_EMAIL_TOO_LONG;
-  if (emailInvalid && passwordError) return MSG_BOTH_INVALID;
-  if (emailInvalid) return MSG_INVALID_EMAIL;
-  if (passwordError) return passwordError;
-  return null;
 }
 
 export default function LoginPage() {
@@ -46,31 +19,69 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
+  const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   if (!isLoading && isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  const handlePasswordChange = (value: string) => {
-    if (value.length > PASSWORD_MAX) {
-      showPopup(MSG_PASSWORD_MAX);
-      return;
+  const showFieldError = (field: FieldKey): string | undefined => {
+    if (!touched[field] && !submitted) return undefined;
+    return fieldErrors[field];
+  };
+
+  const validateField = (field: FieldKey, values: { email: string; password: string }) => {
+    let error: string | null = null;
+    switch (field) {
+      case 'email':
+        error = getEmailValidationError(values.email, 'login');
+        break;
+      case 'password':
+        error = getPasswordValidationError(values.password);
+        break;
     }
-    setError(null);
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (error) next[field] = error;
+      else delete next[field];
+      return next;
+    });
+    return error;
+  };
+
+  const validateAll = (values: { email: string; password: string }) => {
+    const errors: Partial<Record<FieldKey, string>> = {};
+    const emailError = getEmailValidationError(values.email, 'login');
+    const passwordError = getPasswordValidationError(values.password);
+    if (emailError) errors.email = emailError;
+    if (passwordError) errors.password = passwordError;
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setTouched((prev) => ({ ...prev, email: true }));
+    validateField('email', { email: value, password });
+  };
+
+  const handlePasswordChange = (value: string) => {
     setPassword(value);
+    setTouched((prev) => ({ ...prev, password: true }));
+    validateField('password', { email, password: value });
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setApiError(null);
+    setSubmitted(true);
 
-    const validationError = getLoginValidationError(email, password);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+    const values = { email, password };
+    if (!validateAll(values)) return;
 
     setSubmitting(true);
 
@@ -79,7 +90,7 @@ export default function LoginPage() {
       showPopup(MSG_LOGIN_SUCCESS);
       navigate('/');
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setApiError(getAuthErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -97,9 +108,9 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          {error && (
+          {apiError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
-              {error}
+              {apiError}
             </div>
           )}
 
@@ -110,35 +121,24 @@ export default function LoginPage() {
             <input
               id="email"
               type="email"
-              required
+              autoComplete="email"
               value={email}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value.trim().length > EMAIL_MAX) {
-                  setError(MSG_EMAIL_TOO_LONG);
-                  return;
-                }
-                setError(null);
-                setEmail(value);
-              }}
+              onChange={(e) => handleEmailChange(e.target.value)}
               className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
               placeholder="you@example.com"
             />
+            <FieldError message={showFieldError('email')} />
           </div>
 
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-dark-200">
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              required
-              maxLength={PASSWORD_MAX}
               value={password}
-              onChange={(e) => handlePasswordChange(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
-              placeholder="4–8 characters"
+              onChange={handlePasswordChange}
+              error={showFieldError('password')}
             />
           </div>
 

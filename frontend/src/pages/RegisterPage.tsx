@@ -1,22 +1,16 @@
 import { FormEvent, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
+import PasswordInput, { FieldError } from '../components/PasswordInput';
 import { useAuth } from '../context/AuthContext';
 import { getAuthErrorMessage } from '../utils/authErrors';
+import {
+  getEmailValidationError,
+  getPasswordValidationError,
+  getUsernameValidationError,
+} from '../utils/passwordValidation';
 
-const PASSWORD_MIN = 4;
-const PASSWORD_MAX = 8;
-const USERNAME_MAX = 12;
-const EMAIL_MAX = 50;
-const USERNAME_REGEX = /^[a-zA-Z0-9]*$/;
-const MSG_EMAIL_TOO_LONG = 'Please add short email';
-const MSG_PASSWORD_REQUIRED = 'Password field is required.';
-const MSG_PASSWORD_MIN = 'Minimum 4 characters required.';
-const MSG_PASSWORD_MAX = 'Maximum 8 characters allowed.';
-
-function showPopup(message: string) {
-  window.alert(message);
-}
+type FieldKey = 'name' | 'email' | 'password';
 
 export default function RegisterPage() {
   const { register, isAuthenticated, isLoading } = useAuth();
@@ -24,88 +18,88 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
+  const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   if (!isLoading && isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
+  const showFieldError = (field: FieldKey): string | undefined => {
+    if (!touched[field] && !submitted) return undefined;
+    return fieldErrors[field];
+  };
+
+  const validateField = (field: FieldKey, values: { name: string; email: string; password: string }) => {
+    let error: string | null = null;
+    switch (field) {
+      case 'name':
+        error = getUsernameValidationError(values.name);
+        break;
+      case 'email':
+        error = getEmailValidationError(values.email);
+        break;
+      case 'password':
+        error = getPasswordValidationError(values.password);
+        break;
+    }
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (error) next[field] = error;
+      else delete next[field];
+      return next;
+    });
+    return error;
+  };
+
+  const validateAll = (values: { name: string; email: string; password: string }) => {
+    const errors: Partial<Record<FieldKey, string>> = {};
+    const nameError = getUsernameValidationError(values.name);
+    const emailError = getEmailValidationError(values.email);
+    const passwordError = getPasswordValidationError(values.password);
+    if (nameError) errors.name = nameError;
+    if (emailError) errors.email = emailError;
+    if (passwordError) errors.password = passwordError;
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleNameChange = (value: string) => {
-    if (!USERNAME_REGEX.test(value)) {
-      showPopup('Username can only contain letters and numbers.');
-      return;
-    }
-    if (value.length > USERNAME_MAX) {
-      showPopup('Maximum length is 12 characters.');
-      return;
-    }
-    setError(null);
     setName(value);
+    setTouched((prev) => ({ ...prev, name: true }));
+    validateField('name', { name: value, email, password });
   };
 
   const handleEmailChange = (value: string) => {
-    if (value.trim().length > EMAIL_MAX) {
-      showPopup(MSG_EMAIL_TOO_LONG);
-      return;
-    }
-    setError(null);
     setEmail(value);
+    setTouched((prev) => ({ ...prev, email: true }));
+    validateField('email', { name, email: value, password });
   };
 
   const handlePasswordChange = (value: string) => {
-    if (value.length > PASSWORD_MAX) {
-      showPopup(MSG_PASSWORD_MAX);
-      return;
-    }
-    setError(null);
     setPassword(value);
+    setTouched((prev) => ({ ...prev, password: true }));
+    validateField('password', { name, email, password: value });
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setApiError(null);
+    setSubmitted(true);
 
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      showPopup('Username is required.');
-      return;
-    }
-    if (!USERNAME_REGEX.test(trimmedName)) {
-      showPopup('Username can only contain letters and numbers.');
-      return;
-    }
-    if (trimmedName.length > USERNAME_MAX) {
-      showPopup('Maximum length is 12 characters.');
-      return;
-    }
-
-    const trimmedEmail = email.trim();
-    if (trimmedEmail.length > EMAIL_MAX) {
-      showPopup(MSG_EMAIL_TOO_LONG);
-      return;
-    }
-
-    if (!password) {
-      showPopup(MSG_PASSWORD_REQUIRED);
-      return;
-    }
-    if (password.length < PASSWORD_MIN) {
-      showPopup(MSG_PASSWORD_MIN);
-      return;
-    }
-    if (password.length > PASSWORD_MAX) {
-      showPopup(MSG_PASSWORD_MAX);
-      return;
-    }
+    const values = { name, email, password };
+    if (!validateAll(values)) return;
 
     setSubmitting(true);
 
     try {
-      await register(trimmedName, trimmedEmail, password);
+      await register(name.trim(), email.trim(), password);
       navigate('/');
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setApiError(getAuthErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -123,9 +117,9 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          {error && (
+          {apiError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
-              {error}
+              {apiError}
             </div>
           )}
 
@@ -136,13 +130,13 @@ export default function RegisterPage() {
             <input
               id="name"
               type="text"
-              required
-              maxLength={USERNAME_MAX}
+              autoComplete="username"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
-              placeholder="Letters & numbers, max 12"
+              placeholder="yourusername"
             />
+            <FieldError message={showFieldError('name')} />
           </div>
 
           <div>
@@ -152,27 +146,25 @@ export default function RegisterPage() {
             <input
               id="email"
               type="email"
-              required
+              autoComplete="email"
               value={email}
               onChange={(e) => handleEmailChange(e.target.value)}
               className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
               placeholder="you@example.com"
             />
+            <FieldError message={showFieldError('email')} />
           </div>
 
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-dark-200">
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              required
-              maxLength={PASSWORD_MAX}
               value={password}
-              onChange={(e) => handlePasswordChange(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
-              placeholder="4–8 characters"
+              onChange={handlePasswordChange}
+              autoComplete="new-password"
+              error={showFieldError('password')}
             />
           </div>
 
