@@ -7,11 +7,10 @@ import { voiceRateLimit } from "../middleware/voiceRateLimit";
 
 const router = Router();
 
-router.use(authenticate);
-router.use(voiceRateLimit);
-
 router.post(
   "/voice/audio",
+  authenticate,
+  voiceRateLimit,
   wrapMulterUpload(audioUpload.single("audio")),
   voiceController.sendVoiceAudio
 );

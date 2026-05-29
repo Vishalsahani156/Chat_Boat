@@ -18,6 +18,16 @@ const handleValidationErrors = (
   next();
 };
 
+const optionalConversationId = body("conversationId")
+  .optional({ values: "null" })
+  .isString()
+  .withMessage("conversationId must be a string")
+  .trim()
+  .notEmpty()
+  .withMessage("conversationId cannot be empty")
+  .isUUID()
+  .withMessage("Invalid conversation ID");
+
 export const validateChatMessage = [
   body("message")
     .exists({ checkFalsy: true })
@@ -27,6 +37,7 @@ export const validateChatMessage = [
     .trim()
     .notEmpty()
     .withMessage("Message cannot be empty"),
+  optionalConversationId,
   handleValidationErrors,
 ];
 
@@ -39,6 +50,7 @@ export const validateVoiceChat = [
     .trim()
     .notEmpty()
     .withMessage("Audio text cannot be empty"),
+  optionalConversationId,
   handleValidationErrors,
 ];
 

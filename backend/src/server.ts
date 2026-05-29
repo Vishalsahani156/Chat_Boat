@@ -13,9 +13,12 @@ import chatRoutes from "./routes/chatRoutes";
 import authRoutes from "./routes/authRoutes";
 import voiceRoutes from "./routes/voiceRoutes";
 import { errorHandler } from "./middleware/errorHandler";
+import { notFoundHandler } from "./middleware/notFound";
 import * as chatService from "./services/chatService";
 import { attachVoiceHandlers, cleanupVoiceSession } from "./services/geminiLiveService";
 import { verifyAccessToken } from "./utils/jwt";
+import { isValidUuid } from "./utils/uuid";
+import { AppError } from "./middleware/errorHandler";
 import { validateAuthConfig } from "./config/env";
 import prisma from "./config/database";
 
@@ -81,6 +84,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api", voiceRoutes);
 app.use("/api", chatRoutes);
+app.use("/api", notFoundHandler);
 
 app.use(errorHandler);
 
@@ -118,7 +122,16 @@ io.on("connection", (socket) => {
         return;
       }
 
-      const result = await chatService.processMessage(message.trim(), userId, conversationId);
+      const convId =
+        typeof conversationId === "string" && conversationId.trim()
+          ? conversationId.trim()
+          : undefined;
+      if (convId && !isValidUuid(convId)) {
+        socket.emit("error", { message: "Invalid conversation ID" });
+        return;
+      }
+
+      const result = await chatService.processMessage(message.trim(), userId, convId);
 
       socket.emit("newMessage", {
         conversationId: result.conversationId,
@@ -129,9 +142,13 @@ io.on("connection", (socket) => {
       });
     } catch (error) {
       console.error("Socket message error:", error);
-      socket.emit("error", {
-        message: error instanceof Error ? error.message : "Failed to process message",
-      });
+      const message =
+        error instanceof AppError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Failed to process message";
+      socket.emit("error", { message });
     }
   });
 

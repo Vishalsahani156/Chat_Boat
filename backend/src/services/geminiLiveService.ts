@@ -5,6 +5,7 @@ import * as geminiService from "./geminiService";
 import prisma from "../config/database";
 import { MessageHistory } from "../types";
 import { normalizeAudioMime } from "../middleware/upload";
+import { isValidUuid } from "../utils/uuid";
 
 interface LiveSession {
   userId: string;
@@ -172,7 +173,12 @@ async function processLiveSession(socket: Socket, session: LiveSession): Promise
 export function attachVoiceHandlers(socket: Socket): void {
   socket.on("voiceStart", (data: { conversationId?: string }) => {
     const userId = socket.data.userId as string;
-    startSession(socket.id, userId, data?.conversationId);
+    const conversationId = data?.conversationId?.trim();
+    if (conversationId && !isValidUuid(conversationId)) {
+      socket.emit("voiceError", { message: "Invalid conversation ID" });
+      return;
+    }
+    startSession(socket.id, userId, conversationId || undefined);
   });
 
   socket.on("voiceChunk", (data: { data: string; mimeType?: string }) => {
