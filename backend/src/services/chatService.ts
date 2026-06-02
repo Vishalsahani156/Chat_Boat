@@ -4,28 +4,31 @@ import * as geminiService from "./geminiService";
 import type { ResponseMode } from "./geminiService";
 import { ChatResponse, MessageHistory } from "../types";
 
+async function ensureConversationId(
+  message: string,
+  userId: string,
+  conversationId?: string
+): Promise<string> {
+  if (conversationId) {
+    const existing = await prisma.conversation.findFirst({
+      where: { id: conversationId, userId },
+    });
+    if (existing) return existing.id;
+  }
+
+  const title = message.length > 50 ? message.substring(0, 50) + "..." : message;
+  const conversation = await prisma.conversation.create({
+    data: { title, userId },
+  });
+  return conversation.id;
+}
+
 export async function resolveConversationContext(
   message: string,
   userId: string,
   conversationId?: string
 ): Promise<{ convId: string; history: MessageHistory[] }> {
-  let convId = conversationId;
-
-  if (!convId) {
-    const title = message.length > 50 ? message.substring(0, 50) + "..." : message;
-    const conversation = await prisma.conversation.create({
-      data: { title, userId },
-    });
-    convId = conversation.id;
-  }
-
-  const existingConversation = await prisma.conversation.findFirst({
-    where: { id: convId, userId },
-  });
-
-  if (!existingConversation) {
-    throw new AppError("Conversation not found", 404);
-  }
+  const convId = await ensureConversationId(message, userId, conversationId);
 
   const previousMessages = await prisma.message.findMany({
     where: { conversationId: convId },
@@ -99,23 +102,7 @@ export const streamMessage = async function* (
   userId: string,
   conversationId?: string
 ): AsyncGenerator<{ type: "chunk"; text: string } | { type: "done"; reply: string; conversationId: string }> {
-  let convId = conversationId;
-
-  if (!convId) {
-    const title = message.length > 50 ? message.substring(0, 50) + "..." : message;
-    const conversation = await prisma.conversation.create({
-      data: { title, userId },
-    });
-    convId = conversation.id;
-  }
-
-  const existingConversation = await prisma.conversation.findFirst({
-    where: { id: convId, userId },
-  });
-
-  if (!existingConversation) {
-    throw new AppError("Conversation not found", 404);
-  }
+  const convId = await ensureConversationId(message, userId, conversationId);
 
   const previousMessages = await prisma.message.findMany({
     where: { conversationId: convId },

@@ -18,7 +18,7 @@ export function useChat(conversationId: string | null) {
     activeConversationIdRef.current = activeConversationId;
   }, [activeConversationId]);
 
-  const sendMessage = useCallback(async (content: string): Promise<string | null> => {
+  const sendMessage = useCallback(async (content: string, isRetry = false): Promise<string | null> => {
     setError(null);
     setLoading(true);
 
@@ -79,14 +79,24 @@ export function useChat(conversationId: string | null) {
       return null;
     } catch (err: unknown) {
       let message = 'Failed to send message';
+      let staleConversation = false;
       if (axios.isAxiosError(err)) {
         if (!err.response) {
           message = 'Cannot reach the server. Start the backend with npm run dev in the backend folder.';
         } else if (typeof err.response.data?.message === 'string') {
           message = err.response.data.message;
+          staleConversation =
+            err.response.status === 404 && message === 'Conversation not found';
         }
       } else if (err instanceof Error) {
         message = err.message;
+      }
+      if (staleConversation && !isRetry) {
+        setActiveConversationId(null);
+        activeConversationIdRef.current = null;
+        setError(null);
+        setMessages(prev => prev.filter(m => m.id !== userMessage.id && m.id !== assistantId));
+        return sendMessage(content, true);
       }
       setError(message);
       setMessages(prev => prev.filter(m => m.id !== assistantId));

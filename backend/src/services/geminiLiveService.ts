@@ -98,8 +98,11 @@ async function processLiveSession(socket: Socket, session: LiveSession): Promise
         where: { id: convId, userId: session.userId },
       });
       if (!existing) {
-        socket.emit("voiceError", { message: "Conversation not found" });
-        return;
+        const title = text.length > 50 ? `${text.substring(0, 50)}...` : text;
+        const conversation = await prisma.conversation.create({
+          data: { title, userId: session.userId },
+        });
+        convId = conversation.id;
       }
     }
 

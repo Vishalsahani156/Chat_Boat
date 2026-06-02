@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { Menu, Moon, Sun, VolumeX } from 'lucide-react';
 import { Message } from '../types';
 import { useThemeContext } from '../context/ThemeContext';
@@ -57,7 +57,6 @@ export default function ChatArea({
   const { isDark, toggleTheme } = useThemeContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [prefill, setPrefill] = useState<{ key: number; text: string } | null>(null);
 
   const showTyping = loading || isProcessing || isLiveProcessing;
 
@@ -117,7 +116,7 @@ export default function ChatArea({
       {messages.length === 0 && !showTyping ? (
         <WelcomeScreen
           onSuggestionClick={(prompt) => {
-            setPrefill({ key: Date.now(), text: prompt });
+            onSendMessage(prompt);
           }}
         />
       ) : (
@@ -140,8 +139,6 @@ export default function ChatArea({
         isProcessing={isProcessing}
         voiceDisabled={voiceDisabled}
         inputDisabled={inputDisabled}
-        prefillKey={prefill?.key}
-        prefillText={prefill?.text}
         ref={inputRef}
       />
     </div>

@@ -135,6 +135,8 @@ export default function ChatPage() {
       await liveVoice.stopLiveMode();
     }
     setActiveConversation(id);
+    setConversationId(id);
+    setError(null);
     setSidebarOpen(false);
     try {
       const response = await getConversation(id);
@@ -143,17 +145,24 @@ export default function ChatPage() {
       }
     } catch (err) {
       console.error('Failed to load conversation:', err);
+      setError('This chat was deleted or is no longer available.');
+      setActiveConversation(null);
+      setConversationId(null);
+      setMessages([]);
+      setConversations(prev => prev.filter(c => c.id !== id));
     }
-  }, [setMessages, liveVoice]);
+  }, [setMessages, setConversationId, setError, liveVoice]);
 
   const handleNewChat = useCallback(async () => {
     if (liveVoice.isActive) {
       await liveVoice.stopLiveMode();
     }
+    setConversationId(null);
     setActiveConversation(null);
     setMessages([]);
+    setError(null);
     setSidebarOpen(false);
-  }, [setMessages, liveVoice]);
+  }, [setMessages, setConversationId, setError, liveVoice]);
 
   const handleDeleteConversation = useCallback(async (id: string) => {
     try {
