@@ -16,7 +16,8 @@ export const MSG_USERNAME_INVALID = 'Username can only contain letters and numbe
 
 export const MSG_EMAIL_REQUIRED = 'Email is required';
 export const MSG_EMAIL_INVALID = 'Valid email is required';
-export const MSG_EMAIL_INVALID_LOGIN = 'Invalid email';
+export const MSG_EMAIL_INVALID_LOGIN = 'Invalid email format';
+export const MSG_EMAIL_REQUIRED_LOGIN = 'Email is required';
 export const MSG_EMAIL_TOO_LONG = 'Please add short email';
 
 export type EmailValidationContext = 'login' | 'register';
@@ -35,6 +36,10 @@ export function getUsernameValidationError(name: string): string | null {
   return null;
 }
 
+export function normalizeEmailInput(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 export function getEmailValidationError(
   email: string,
   context: EmailValidationContext = 'register'
@@ -42,7 +47,7 @@ export function getEmailValidationError(
   const trimmed = email.trim();
 
   if (!trimmed) {
-    return context === 'login' ? MSG_EMAIL_INVALID_LOGIN : MSG_EMAIL_REQUIRED;
+    return context === 'login' ? MSG_EMAIL_REQUIRED_LOGIN : MSG_EMAIL_REQUIRED;
   }
   if (trimmed.length > EMAIL_MAX) return MSG_EMAIL_TOO_LONG;
   if (!EMAIL_REGEX.test(trimmed)) {

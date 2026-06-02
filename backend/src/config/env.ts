@@ -1,4 +1,4 @@
-/** Shared email normalization for register/login (trim + lowercase only). */
+/** Trim + lowercase. Gmail dot/+tag normalization runs in validation middleware via .normalizeEmail(). */
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }

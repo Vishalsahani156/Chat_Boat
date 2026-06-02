@@ -1,4 +1,5 @@
 import prisma from "../config/database";
+import { normalizeEmail } from "../config/env";
 import { AppError } from "../middleware/errorHandler";
 import { comparePassword, hashPassword, validatePassword } from "../utils/password";
 import { signAccessToken } from "../utils/jwt";
@@ -34,7 +35,7 @@ export async function registerUser(
   email: string,
   password: string
 ): Promise<AuthResult> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
   const trimmedName = name.trim();
 
   const passwordError = validatePassword(password);
@@ -69,7 +70,7 @@ export async function registerUser(
 }
 
 export async function loginUser(email: string, password: string): Promise<AuthResult> {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },

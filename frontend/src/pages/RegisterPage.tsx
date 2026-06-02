@@ -8,6 +8,7 @@ import {
   getEmailValidationError,
   getPasswordValidationError,
   getUsernameValidationError,
+  normalizeEmailInput,
 } from '../utils/passwordValidation';
 
 type FieldKey = 'name' | 'email' | 'password';
@@ -96,7 +97,7 @@ export default function RegisterPage() {
     setSubmitting(true);
 
     try {
-      await register(name.trim(), email.trim(), password);
+      await register(name.trim(), normalizeEmailInput(email), password);
       navigate('/');
     } catch (err) {
       setApiError(getAuthErrorMessage(err));

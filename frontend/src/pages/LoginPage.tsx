@@ -4,7 +4,11 @@ import { Sparkles } from 'lucide-react';
 import PasswordInput, { FieldError } from '../components/PasswordInput';
 import { useAuth } from '../context/AuthContext';
 import { getAuthErrorMessage } from '../utils/authErrors';
-import { getEmailValidationError, getPasswordValidationError } from '../utils/passwordValidation';
+import {
+  getEmailValidationError,
+  getPasswordValidationError,
+  normalizeEmailInput,
+} from '../utils/passwordValidation';
 
 const MSG_LOGIN_SUCCESS = 'Login Successfully';
 
@@ -86,7 +90,7 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      await login(email.trim(), password);
+      await login(normalizeEmailInput(email), password);
       showPopup(MSG_LOGIN_SUCCESS);
       navigate('/');
     } catch (err) {

@@ -105,16 +105,11 @@ const handleLoginValidationErrors = (
     const emailInvalid = "email" in mapped;
     const passwordInvalid = "password" in mapped;
 
-    let message: string;
-    if (emailInvalid && passwordInvalid) {
-      message = "Invalid email | Invalid password";
-    } else if (emailInvalid) {
-      message = mapped.email?.msg ?? "Invalid email";
-    } else if (passwordInvalid) {
-      message = mapped.password?.msg ?? "Invalid password";
-    } else {
-      message = errors.array()[0]?.msg ?? "Validation failed";
-    }
+    const parts: string[] = [];
+    if (emailInvalid && mapped.email?.msg) parts.push(mapped.email.msg);
+    if (passwordInvalid && mapped.password?.msg) parts.push(mapped.password.msg);
+    const message =
+      parts.length > 0 ? parts.join(". ") : (errors.array()[0]?.msg ?? "Validation failed");
 
     res.status(400).json({ success: false, message });
     return;
@@ -125,10 +120,12 @@ const handleLoginValidationErrors = (
 export const validateLogin = [
   body("email")
     .exists({ checkFalsy: true })
-    .withMessage("Invalid email")
+    .withMessage("Email is required")
     .trim()
+    .notEmpty()
+    .withMessage("Email is required")
     .isEmail()
-    .withMessage("Invalid email")
+    .withMessage("Invalid email format")
     .isLength({ max: 50 })
     .withMessage("Please add short email")
     .normalizeEmail(),
