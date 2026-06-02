@@ -268,9 +268,16 @@ The Socket.IO handshake must include a valid JWT: either `auth: { token: '<jwt>'
 | `VOICE_MAX_BYTES` | Max voice upload size | `10485760` |
 | `JWT_SECRET` | Secret key for signing JWTs (required for `/api/auth` and protected routes) | - |
 | `JWT_EXPIRES_IN` | Access token lifetime (e.g. `7d`, `24h`) | `7d` |
-| `CORS_ORIGIN` | Allowed CORS origin | `http://localhost:5173` |
+| `CORS_ORIGIN` | Comma-separated allowed browser origins (required in production) | `http://localhost:5173` |
 | `NODE_ENV` | Environment mode | `development` |
 | `TTS_VOICE_DEFAULT` | Edge TTS voice id, or `auto` to pick by detected language | `auto` |
+| `VOICE_RATE_LIMIT_PER_MIN` | Max voice uploads per user per minute | `20` |
+
+### Production CORS and proxy
+
+When `NODE_ENV=production`, only origins listed in `CORS_ORIGIN` are allowed (no wildcard localhost). For Docker Compose, the default includes `http://localhost` (port 80) and Vite dev ports. For a custom domain, set e.g. `CORS_ORIGIN=https://your-domain.com`.
+
+`GET /health` returns `{ status, geminiConfigured, db, timestamp }` for load balancers and ops checks.
 
 ### Text-to-speech (no Google Cloud)
 

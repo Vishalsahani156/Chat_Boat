@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Conversation } from '../types';
-import { getHistory, getConversation, deleteConversation, deleteAllConversations } from '../services/api';
+import {
+  getHistory,
+  getConversation,
+  deleteConversation,
+  deleteAllConversations,
+} from '../services/api';
+import { getAuthErrorMessage } from '../utils/authErrors';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { useVoice } from '../hooks/useVoice';
@@ -17,24 +23,6 @@ export default function ChatPage() {
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const fetchHistory = useCallback(async () => {
-    try {
-      const response = await getHistory();
-      if (response.success) {
-        const mapped: Conversation[] = response.data.map(c => ({
-          id: c.id,
-          title: c.title,
-          createdAt: c.createdAt,
-          updatedAt: c.updatedAt,
-          messageCount: c.messageCount
-        }));
-        setConversations(mapped);
-      }
-    } catch (err) {
-      console.error('Failed to fetch history:', err);
-    }
-  }, []);
-
   const {
     messages,
     loading,
@@ -44,8 +32,27 @@ export default function ChatPage() {
     setConversationId,
     setMessages,
     setError,
-    activeConversationId
+    activeConversationId,
   } = useChat(activeConversation);
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      const response = await getHistory();
+      if (response.success) {
+        const mapped: Conversation[] = response.data.map((c) => ({
+          id: c.id,
+          title: c.title,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          messageCount: c.messageCount,
+        }));
+        setConversations(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+      setError(getAuthErrorMessage(err) || 'Could not load chat history.');
+    }
+  }, [setError]);
 
   const { speak, stopSpeaking, isSpeaking } = useVoice();
 
@@ -174,8 +181,9 @@ export default function ChatPage() {
       }
     } catch (err) {
       console.error('Failed to delete conversation:', err);
+      setError(getAuthErrorMessage(err) || 'Could not delete this chat.');
     }
-  }, [activeConversation, setMessages]);
+  }, [activeConversation, setMessages, setError]);
 
   const handleDeleteAllConversations = useCallback(async () => {
     if (conversations.length === 0) return;
@@ -192,8 +200,9 @@ export default function ChatPage() {
       setMessages([]);
     } catch (err) {
       console.error('Failed to delete all conversations:', err);
+      setError(getAuthErrorMessage(err) || 'Could not delete chats.');
     }
-  }, [conversations.length, setMessages]);
+  }, [conversations.length, setMessages, setError]);
 
   const handleSendMessage = useCallback(async (content: string) => {
     const newConvId = await sendMessage(content);

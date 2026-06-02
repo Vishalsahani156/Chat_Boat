@@ -19,7 +19,7 @@ import { attachVoiceHandlers, cleanupVoiceSession } from "./services/geminiLiveS
 import { verifyAccessToken } from "./utils/jwt";
 import { isValidUuid } from "./utils/uuid";
 import { AppError } from "./middleware/errorHandler";
-import { validateAuthConfig, validateGeminiConfig } from "./config/env";
+import { validateAuthConfig, validateGeminiConfig, isGeminiConfigured } from "./config/env";
 import prisma from "./config/database";
 
 validateAuthConfig();
@@ -78,8 +78,22 @@ app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "10mb" }));
 
-app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+app.get("/health", async (_req, res) => {
+  let db: "ok" | "error" = "ok";
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    db = "error";
+  }
+
+  const payload = {
+    status: db === "ok" ? "ok" : "degraded",
+    geminiConfigured: isGeminiConfigured(),
+    db,
+    timestamp: new Date().toISOString(),
+  };
+
+  res.status(db === "ok" ? 200 : 503).json(payload);
 });
 
 app.use("/api/auth", authRoutes);

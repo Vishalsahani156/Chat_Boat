@@ -19,6 +19,15 @@ export function connectSocket(token: string): void {
     reconnectionDelayMax: 5000,
     timeout: 20000,
   });
+
+  if (import.meta.env.DEV) {
+    socket.on('connect_error', (err) => {
+      console.warn('[socket] connect_error:', err.message);
+    });
+    socket.on('disconnect', (reason) => {
+      console.warn('[socket] disconnect:', reason);
+    });
+  }
 }
 
 export function disconnectSocket(): void {
