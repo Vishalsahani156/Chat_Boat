@@ -6,7 +6,7 @@ A full-stack AI-powered chatbot application built with React, Express, and Googl
 
 - AI-powered chatbot with Google Gemini integration
 - Real-time messaging with Socket.io
-- Push-to-talk voice (any language): record audio → Gemini STT → AI reply → TTS playback
+- Push-to-talk voice (any language): record audio → Gemini STT → AI reply → server TTS playback (free Edge TTS; browser fallback if synthesis fails)
 - Live voice mode via Socket.IO (streamed text + spoken reply)
 - Streaming text chat (SSE) for ChatGPT-style incremental replies
 - Chat history stored in PostgreSQL
@@ -246,6 +246,20 @@ The Socket.IO handshake must include a valid JWT: either `auth: { token: '<jwt>'
 | `JWT_EXPIRES_IN` | Access token lifetime (e.g. `7d`, `24h`) | `7d` |
 | `CORS_ORIGIN` | Allowed CORS origin | `http://localhost:5173` |
 | `NODE_ENV` | Environment mode | `development` |
+| `TTS_VOICE_DEFAULT` | Edge TTS voice id, or `auto` to pick by detected language | `auto` |
+
+### Text-to-speech (no Google Cloud)
+
+Voice replies use **Microsoft Edge online TTS** via the [`edge-tts-universal`](https://www.npmjs.com/package/edge-tts-universal) package. No `GOOGLE_CLOUD_PROJECT_ID`, service account JSON, or paid Google Cloud APIs are required. The backend needs outbound HTTPS/WebSocket access to Microsoft’s speech service.
+
+If server synthesis fails, the frontend still speaks replies using the browser **Speech Synthesis** API (`frontend/src/utils/audioPlayback.ts`).
+
+Remove any legacy variables from `backend/.env`:
+
+- `GOOGLE_CLOUD_PROJECT_ID`
+- `GOOGLE_APPLICATION_CREDENTIALS`
+
+Optional override: set `TTS_VOICE_DEFAULT` to a specific neural voice (e.g. `en-US-JennyNeural`) or leave `auto`.
 
 ### Frontend
 

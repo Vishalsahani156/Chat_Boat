@@ -37,6 +37,7 @@ services:
       JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-7d}"
       # Comma-separated: Vite dev (5173), optional 127.0.0.1, Docker frontend on :80
       CORS_ORIGIN: "${CORS_ORIGIN:-http://localhost:5173,http://127.0.0.1:5173,http://localhost}"
+      TTS_VOICE_DEFAULT: "${TTS_VOICE_DEFAULT:-auto}"
       NODE_ENV: production
     depends_on:
       postgres:
