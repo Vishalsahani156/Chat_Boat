@@ -3,6 +3,7 @@ import { connectSocket, getSocket } from '../services/socket';
 import { arrayBufferToBase64 } from '../utils/base64';
 import { getToken } from '../services/api';
 import { playReplyAudio, stopPlayback } from '../utils/audioPlayback';
+import { getVoiceErrorMessage } from '../utils/voiceErrors';
 import { useAudioRecorder } from './useAudioRecorder';
 
 export type LiveVoiceStatus = 'off' | 'listening' | 'processing' | 'speaking';
@@ -120,7 +121,7 @@ export function useLiveVoice({
     };
 
     const onVoiceError = (data: { message: string }) => {
-      onError(data.message);
+      onError(getVoiceErrorMessage(data.message, 'Live voice failed'));
       activeRef.current = false;
       recorder.cancelRecording();
       setStatus('off');
@@ -154,7 +155,12 @@ export function useLiveVoice({
     const socket = getSocket();
     const connected = await waitForSocketConnection(socket);
     if (!connected) {
-      onError('Could not connect for live voice');
+      onError(
+        getVoiceErrorMessage(
+          'Could not connect for live voice',
+          'Could not connect for live voice'
+        )
+      );
       return;
     }
 
@@ -190,7 +196,8 @@ export function useLiveVoice({
     }
 
     if (!blob || blob.size < 100) {
-      onError('Recording too short. Try again.');
+      socket?.emit('voiceInterrupt');
+      onError(getVoiceErrorMessage('Recording too short', 'Recording too short. Try again.'));
       if (activeRef.current) {
         setStatus('listening');
         const ok = await recorder.startRecording();
@@ -209,8 +216,9 @@ export function useLiveVoice({
       socket.emit('voiceEnd');
       setStatus('processing');
     } else {
-      onError('Connection lost. Please try again.');
+      onError(getVoiceErrorMessage('Connection lost', 'Connection lost. Please try again.'));
       setStatus('off');
+      activeRef.current = false;
     }
   }, [recorder, onError]);
 

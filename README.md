@@ -107,6 +107,25 @@ The frontend dev server starts at `http://localhost:5173` (or the next free port
 
 Navigate to [http://localhost:5173](http://localhost:5173) in your browser.
 
+## Troubleshooting: text chat works, voice does not
+
+Voice uses **extra steps** beyond text chat: microphone capture, audio upload or WebSocket, **Gemini speech-to-text**, then the same AI reply + optional TTS.
+
+| Symptom | Likely cause | What to do |
+|--------|----------------|------------|
+| Red error: cannot reach server | Backend not running or wrong port | `cd backend && npm run dev` — expect `Server running on port 5000`. `curl http://localhost:5000/health` |
+| Vite: `ws proxy socket error: ECONNRESET` | Socket.IO cannot reach backend | Stop duplicate processes on `:5000` (`ss -tlnp \| grep 5000`). Restart backend, then frontend |
+| Live voice fails, mic may work | WebSocket only used for Live voice | Ensure logged in (JWT in socket handshake). Refresh after backend restart |
+| “Could not understand audio” | Recording too short or STT failed | Speak 2–3 seconds; check backend log for `Gemini transcription error` |
+| “Too many voice requests” | Rate limit | Wait 1 minute (`VOICE_RATE_LIMIT_PER_MIN`, default 20/min) |
+| Text works, voice always 503 | Gemini key/model issue on **audio** API | Valid `GEMINI_API_KEY` in `backend/.env`; try `GEMINI_MODEL=gemini-2.5-flash-lite` |
+
+**Mic (push-to-talk):** chat input mic → `POST /api/voice/audio` (check Network tab).
+
+**Live voice:** header “Live” → Socket.IO `voiceStart` / `voiceChunk` / `voiceEnd` (check WS tab).
+
+**Note:** `Whisper_api_key` in `.env` is **not used**. Speech-to-text is handled by Gemini only.
+
 ## Docker Deployment
 
 Deploy the entire stack with a single command:

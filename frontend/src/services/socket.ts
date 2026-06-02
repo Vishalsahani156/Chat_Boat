@@ -12,7 +12,12 @@ export function connectSocket(token: string): void {
   disconnectSocket();
   socket = io(URL, {
     auth: { token },
-    transports: ['websocket', 'polling']
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 8,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
   });
 }
 

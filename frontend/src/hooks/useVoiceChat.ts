@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
 import { Message } from '../types';
 import { sendVoiceAudio } from '../services/api';
 import { playReplyAudio, stopPlayback, isPlaying } from '../utils/audioPlayback';
+import { getVoiceErrorMessage } from '../utils/voiceErrors';
 import { useAudioRecorder } from './useAudioRecorder';
 
 export type VoiceChatStatus = 'idle' | 'recording' | 'processing' | 'speaking';
@@ -72,17 +72,7 @@ export function useVoiceChat({
         }
         setStatus('idle');
       } catch (err: unknown) {
-        let message = 'Failed to process voice message';
-        if (axios.isAxiosError(err)) {
-          if (!err.response) {
-            message = 'Cannot reach the server. Start the backend with npm run dev in the backend folder.';
-          } else if (typeof err.response.data?.message === 'string') {
-            message = err.response.data.message;
-          }
-        } else if (err instanceof Error) {
-          message = err.message;
-        }
-        onError(message);
+        onError(getVoiceErrorMessage(err, 'Failed to process voice message'));
         setStatus('idle');
       }
       return;

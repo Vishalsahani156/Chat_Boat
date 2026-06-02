@@ -173,21 +173,32 @@ function buildChatPrompt(
   ].join("\n");
 }
 
+function stripModelFences(raw: string): string {
+  return raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
 function parseTranscriptionJson(raw: string): { text: string; language: string } {
-  const trimmed = raw.trim();
+  const trimmed = stripModelFences(raw.trim());
   const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[0]) as { text?: string; language?: string };
-      return {
-        text: String(parsed.text ?? "").trim(),
-        language: String(parsed.language ?? "en").toLowerCase().slice(0, 5),
-      };
+      const text = String(parsed.text ?? "").trim();
+      const language = String(parsed.language ?? "en").toLowerCase().slice(0, 5);
+      if (text) {
+        return { text, language };
+      }
     } catch {
       /* fall through */
     }
   }
-  return { text: trimmed, language: "en" };
+  if (trimmed && !trimmed.startsWith("{")) {
+    return { text: trimmed, language: "en" };
+  }
+  return { text: "", language: "en" };
 }
 
 function parseVoiceTurnJson(raw: string): {
@@ -195,7 +206,7 @@ function parseVoiceTurnJson(raw: string): {
   language: string;
   reply: string;
 } {
-  const trimmed = raw.trim();
+  const trimmed = stripModelFences(raw.trim());
   const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     try {
@@ -204,16 +215,26 @@ function parseVoiceTurnJson(raw: string): {
         language?: string;
         reply?: string;
       };
-      return {
-        text: String(parsed.text ?? "").trim(),
-        language: String(parsed.language ?? "en").toLowerCase().slice(0, 5),
-        reply: String(parsed.reply ?? "").trim(),
-      };
+      const text = String(parsed.text ?? "").trim();
+      const reply = String(parsed.reply ?? "").trim();
+      const language = String(parsed.language ?? "en").toLowerCase().slice(0, 5);
+      if (text && reply) {
+        return { text, language, reply };
+      }
+      if (reply && !text) {
+        return { text: "(voice message)", language, reply };
+      }
+      if (text && !reply) {
+        return { text, language, reply: text };
+      }
     } catch {
       /* fall through */
     }
   }
-  return { text: "", language: "en", reply: trimmed };
+  if (trimmed && !trimmed.startsWith("{")) {
+    return { text: "(voice message)", language: "en", reply: trimmed };
+  }
+  return { text: "", language: "en", reply: "" };
 }
 
 function buildVoiceTurnInstruction(history: MessageHistory[]): string {

@@ -2,11 +2,18 @@ import { Socket } from "socket.io";
 import * as sttService from "./sttService";
 import * as ttsService from "./ttsService";
 import * as geminiService from "./geminiService";
+import { AppError } from "../middleware/errorHandler";
 import { prepareTextForTts } from "../utils/voiceText";
 import prisma from "../config/database";
 import { MessageHistory } from "../types";
 import { normalizeAudioMime } from "../middleware/upload";
 import { isValidUuid } from "../utils/uuid";
+
+function voiceErrorMessage(error: unknown): string {
+  if (error instanceof AppError) return error.message;
+  if (error instanceof Error) return error.message;
+  return "Voice session failed";
+}
 
 interface LiveSession {
   userId: string;
@@ -76,6 +83,12 @@ async function processLiveSession(socket: Socket, session: LiveSession): Promise
 
     const audioBuffer = Buffer.concat(session.chunks);
     const mimeType = session.mimeType;
+
+    if (process.env.NODE_ENV !== "production") {
+      console.info(
+        `[live-voice] socket=${socketId} bytes=${audioBuffer.length} mime=${mimeType}`
+      );
+    }
 
     const { text, language } = await sttService.transcribe(audioBuffer, mimeType);
     if (isAborted(socketId)) return;
@@ -172,7 +185,7 @@ async function processLiveSession(socket: Socket, session: LiveSession): Promise
     if (isAborted(socketId)) return;
     console.error("Live voice session error:", error);
     socket.emit("voiceError", {
-      message: error instanceof Error ? error.message : "Voice session failed",
+      message: voiceErrorMessage(error),
     });
   } finally {
     abortedSockets.delete(socketId);

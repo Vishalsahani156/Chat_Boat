@@ -34,6 +34,13 @@ export const sendVoiceAudio = async (
         : undefined;
 
     const mimeType = normalizeAudioMime(file.mimetype);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.info(
+        `[voice] user=${userId} bytes=${file.buffer.length} mime=${mimeType} conv=${conversationId ?? "new"}`
+      );
+    }
+
     const result = await voiceService.processVoiceAudio(
       file.buffer,
       mimeType,

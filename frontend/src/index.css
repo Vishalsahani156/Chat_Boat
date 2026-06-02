@@ -49,9 +49,21 @@ body {
 
 @layer components {
   .app-shell {
-    @apply min-h-screen overflow-x-hidden bg-slate-50 text-slate-900;
-    @apply bg-mesh-light dark:bg-dark-950 dark:bg-mesh-dark dark:text-slate-100;
+    @apply min-h-screen overflow-x-hidden text-slate-900 dark:text-slate-100;
     min-height: 100dvh;
+    background-color: #f8fafc;
+    background-image:
+      radial-gradient(at 40% 20%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, rgba(167, 139, 250, 0.08) 0px, transparent 50%);
+  }
+
+  .dark .app-shell {
+    background-color: #010409;
+    background-image:
+      radial-gradient(at 40% 20%, rgba(124, 58, 237, 0.15) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(37, 99, 235, 0.12) 0px, transparent 50%),
+      radial-gradient(at 0% 80%, rgba(109, 40, 217, 0.1) 0px, transparent 50%);
   }
 
   .glass-panel {
