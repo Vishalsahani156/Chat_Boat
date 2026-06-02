@@ -12,8 +12,11 @@ const getApiKey = (): string => {
   return key;
 };
 
+/** Default model with reliable free-tier access (see Google AI Studio rate limits). */
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
+
 const modelName = () =>
-  process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+  process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
 
 const getModel = () => {
   const genAI = new GoogleGenerativeAI(getApiKey());
@@ -22,7 +25,16 @@ const getModel = () => {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+function geminiHttpStatus(error: unknown): number | undefined {
+  if (error && typeof error === "object" && "status" in error) {
+    const status = (error as { status?: number }).status;
+    return typeof status === "number" ? status : undefined;
+  }
+  return undefined;
+}
+
 function isQuotaOrRateLimit(error: unknown): boolean {
+  if (geminiHttpStatus(error) === 429) return true;
   if (!(error instanceof Error)) return false;
   const m = error.message.toLowerCase();
   return (
@@ -32,6 +44,25 @@ function isQuotaOrRateLimit(error: unknown): boolean {
     m.includes("resource exhausted") ||
     m.includes("too many requests")
   );
+}
+
+function isInvalidApiKey(error: unknown): boolean {
+  if (geminiHttpStatus(error) === 401 || geminiHttpStatus(error) === 403) {
+    return true;
+  }
+  if (!(error instanceof Error)) return false;
+  const m = error.message.toLowerCase();
+  return (
+    m.includes("api key not valid") ||
+    m.includes("api_key_invalid") ||
+    m.includes("invalid api key")
+  );
+}
+
+function isModelNotFound(error: unknown): boolean {
+  if (geminiHttpStatus(error) === 404) return true;
+  if (!(error instanceof Error)) return false;
+  return error.message.toLowerCase().includes("is not found");
 }
 
 const QUOTA_MESSAGE =
@@ -44,8 +75,17 @@ function toGeminiAppError(error: unknown, fallback: string): AppError {
     if (error.message.includes("GEMINI_API_KEY is not set")) {
       return new AppError(error.message, 503);
     }
-    if (error.message.includes("API key")) {
-      return new AppError("Invalid Gemini API key. Check GEMINI_API_KEY in backend/.env.", 503);
+    if (isInvalidApiKey(error)) {
+      return new AppError(
+        "Invalid Gemini API key. Create a key at https://aistudio.google.com/apikey and set GEMINI_API_KEY in backend/.env (no quotes needed).",
+        503
+      );
+    }
+    if (isModelNotFound(error)) {
+      return new AppError(
+        `Gemini model "${modelName()}" is unavailable. Set GEMINI_MODEL=${DEFAULT_GEMINI_MODEL} in backend/.env.`,
+        503
+      );
     }
     if (isQuotaOrRateLimit(error)) {
       return new AppError(QUOTA_MESSAGE, 429);
