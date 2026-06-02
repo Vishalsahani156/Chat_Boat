@@ -12,9 +12,9 @@ interface VoiceModeProps {
 
 const STATUS_LABEL: Record<LiveVoiceStatus, string> = {
   off: 'Live voice off',
-  listening: 'Listening… tap End when done speaking',
+  listening: 'Listening…',
   processing: 'Thinking…',
-  speaking: 'Speaking… tap to interrupt'
+  speaking: 'Speaking…',
 };
 
 export default function VoiceMode({
@@ -23,33 +23,34 @@ export default function VoiceMode({
   onStart,
   onStop,
   onEndTurn,
-  onInterrupt
+  onInterrupt,
 }: VoiceModeProps) {
   const isActive = status !== 'off';
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       {!isActive ? (
         <button
           type="button"
           onClick={onStart}
           disabled={disabled}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-            bg-purple-500/15 text-purple-700 hover:bg-purple-500/25
-            dark:text-purple-300 dark:hover:bg-purple-500/20 transition-colors
-            disabled:opacity-50 disabled:pointer-events-none"
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-brand-500/30
+            bg-brand-500/10 px-2.5 py-1.5 text-xs font-semibold text-brand-700
+            transition-all hover:bg-brand-500/20 active:scale-[0.98]
+            disabled:pointer-events-none disabled:opacity-50
+            dark:border-brand-400/30 dark:bg-brand-500/15 dark:text-brand-200 sm:px-3"
           title={disabled ? 'Finish mic recording first' : 'Start live voice conversation'}
         >
           <Radio size={14} />
-          Live voice
+          <span className="hidden sm:inline">Live</span>
         </button>
       ) : (
         <>
           <span
-            className={`hidden sm:inline text-xs ${
+            className={`hidden max-w-[140px] truncate text-[11px] font-medium lg:inline xl:max-w-none ${
               status === 'listening'
-                ? 'text-red-600 dark:text-red-400 animate-pulse'
-                : 'text-slate-600 dark:text-dark-400'
+                ? 'animate-pulse-soft text-red-600 dark:text-red-400'
+                : 'text-slate-500 dark:text-slate-400'
             }`}
           >
             {STATUS_LABEL[status]}
@@ -58,13 +59,14 @@ export default function VoiceMode({
             <button
               type="button"
               onClick={onEndTurn}
-              className="px-2 py-1 rounded-lg text-xs bg-blue-500 text-white hover:bg-blue-600"
+              className="inline-flex min-h-[36px] items-center rounded-lg bg-brand-600 px-2.5 text-xs font-semibold
+                text-white transition-colors hover:bg-brand-500"
             >
               End
             </button>
           )}
           {status === 'processing' && (
-            <span className="p-1.5 text-slate-600 dark:text-dark-300">
+            <span className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center text-brand-600 dark:text-brand-400">
               <Loader2 size={16} className="animate-spin" />
             </span>
           )}
@@ -72,18 +74,22 @@ export default function VoiceMode({
             <button
               type="button"
               onClick={onInterrupt}
-              className="px-2 py-1 rounded-lg text-xs text-slate-700 hover:bg-slate-100 dark:text-dark-200 dark:hover:bg-dark-600"
+              className="inline-flex min-h-[36px] items-center rounded-lg px-2 text-xs font-medium
+                text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
             >
-              Interrupt
+              Stop
             </button>
           )}
           <button
             type="button"
             onClick={onStop}
-            className="p-1.5 rounded-lg bg-red-500/15 text-red-600 hover:bg-red-500/25 dark:text-red-400"
+            className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl
+              bg-red-500/15 text-red-600 transition-colors hover:bg-red-500/25
+              dark:text-red-400"
             title="Stop live voice"
+            aria-label="Stop live voice"
           >
-            <Square size={14} />
+            <Square size={14} fill="currentColor" />
           </button>
         </>
       )}

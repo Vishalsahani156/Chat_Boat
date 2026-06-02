@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { Menu, Moon, Sun, VolumeX } from 'lucide-react';
+import { Menu, Moon, Sun, VolumeX, Sparkles } from 'lucide-react';
 import { Message } from '../types';
 import { useThemeContext } from '../context/ThemeContext';
 import type { LiveVoiceStatus } from '../hooks/useLiveVoice';
@@ -52,7 +52,7 @@ export default function ChatArea({
   onLiveVoiceEndTurn,
   onLiveVoiceInterrupt,
   isLiveProcessing = false,
-  liveVoiceDisabled = false
+  liveVoiceDisabled = false,
 }: ChatAreaProps) {
   const { isDark, toggleTheme } = useThemeContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -65,21 +65,36 @@ export default function ChatArea({
   }, [messages, showTyping]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-100 dark:bg-dark-900 transition-colors duration-200">
-      <header className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white dark:border-dark-700 dark:bg-dark-800">
-        <div className="flex items-center gap-3">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <header
+        className="glass-panel z-10 flex shrink-0 items-center justify-between gap-2
+          border-b px-3 py-2.5 sm:px-4 sm:py-3"
+      >
+        <div className="flex min-w-0 items-center gap-2">
           <button
+            type="button"
             onClick={onToggleSidebar}
-            className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-600 dark:hover:bg-dark-700 dark:text-dark-300"
+            className="btn-icon md:hidden"
+            aria-label="Open menu"
           >
             <Menu size={20} />
           </button>
-          <h2 className="text-sm font-medium text-slate-800 dark:text-dark-200">
-            {messages.length > 0 ? 'Chat' : 'New Chat'}
-          </h2>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-brand shadow-glow-sm sm:flex">
+              <Sparkles size={16} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                {messages.length > 0 ? 'Conversation' : 'New Chat'}
+              </h2>
+              <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                {messages.length > 0 ? `${messages.length} messages` : 'Start a new conversation'}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <VoiceMode
             status={liveVoiceStatus}
             disabled={liveVoiceDisabled}
@@ -90,17 +105,21 @@ export default function ChatArea({
           />
           {isSpeaking && (
             <button
+              type="button"
               onClick={onStopSpeaking}
-              className="p-2 rounded-lg hover:bg-slate-100 text-red-600 dark:hover:bg-dark-700 dark:text-red-400"
+              className="btn-icon !text-red-500 dark:!text-red-400"
               title="Stop speaking"
+              aria-label="Stop speaking"
             >
               <VolumeX size={18} />
             </button>
           )}
           <button
+            type="button"
             onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 dark:hover:bg-dark-700 dark:text-dark-300 transition-colors"
+            className="btn-icon"
             title={isDark ? 'Light mode' : 'Dark mode'}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -108,7 +127,12 @@ export default function ChatArea({
       </header>
 
       {error && (
-        <div className="mx-4 mt-3 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-800 dark:text-red-300 text-sm">
+        <div
+          className="mx-3 mt-3 shrink-0 rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-sm
+            text-red-800 backdrop-blur-sm animate-fade-in
+            dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300 sm:mx-4"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -120,13 +144,13 @@ export default function ChatArea({
           }}
         />
       ) : (
-        <div className="flex-1 overflow-y-auto px-4 py-6">
-          <div className="max-w-3xl mx-auto space-y-6">
-            {messages.map(msg => (
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-4 sm:px-4 sm:py-6">
+          <div className="mx-auto max-w-3xl space-y-5 sm:space-y-6">
+            {messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} onSpeak={onSpeak} />
             ))}
             {showTyping && <TypingIndicator />}
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="h-1" />
           </div>
         </div>
       )}

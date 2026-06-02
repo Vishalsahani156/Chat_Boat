@@ -8,58 +8,67 @@ const suggestions = [
   {
     icon: Code,
     title: 'Write Code',
-    prompt: 'Help me write a Python function that sorts a list of dictionaries by a specific key'
+    prompt: 'Help me write a Python function that sorts a list of dictionaries by a specific key',
+    accent: 'from-violet-500/20 to-indigo-500/20 text-violet-600 dark:text-violet-300',
   },
   {
     icon: BookOpen,
     title: 'Explain Concepts',
-    prompt: 'Explain how async/await works in JavaScript with examples'
+    prompt: 'Explain how async/await works in JavaScript with examples',
+    accent: 'from-blue-500/20 to-cyan-500/20 text-blue-600 dark:text-blue-300',
   },
   {
     icon: Lightbulb,
     title: 'Brainstorm Ideas',
-    prompt: 'Give me creative project ideas for a portfolio website'
+    prompt: 'Give me creative project ideas for a portfolio website',
+    accent: 'from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-300',
   },
   {
     icon: MessageSquare,
     title: 'General Chat',
-    prompt: 'What are the latest trends in web development?'
-  }
+    prompt: 'What are the latest trends in web development?',
+    accent: 'from-emerald-500/20 to-teal-500/20 text-emerald-600 dark:text-emerald-300',
+  },
 ];
 
 export default function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps) {
   return (
-    <div className="flex-1 flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full text-center">
-        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 
-          flex items-center justify-center shadow-lg shadow-blue-500/20">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto overscroll-contain px-4 py-6 sm:px-6 sm:py-10">
+      <div className="w-full max-w-2xl animate-fade-in-up text-center">
+        <div
+          className="relative mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl
+            bg-gradient-brand shadow-glow sm:h-[4.5rem] sm:w-[4.5rem] sm:rounded-3xl"
+        >
           <Sparkles size={32} className="text-white" />
+          <div className="absolute -inset-1 -z-10 rounded-3xl bg-gradient-brand opacity-20 blur-xl" />
         </div>
 
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">How can I help you today?</h2>
-        <p className="text-slate-600 dark:text-dark-400 mb-8">
-          Type a message, tap the mic for voice (any language), or use Live voice in the header.
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-white">
+          How can I help you today?
+        </h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-400">
+          Type a message, tap the mic for voice, or pick a starter below.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {suggestions.map((item, idx) => (
             <button
               key={idx}
-              onClick={() => onSuggestionClick?.(item.prompt)}
               type="button"
-              className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 
-                bg-slate-50/80 hover:bg-slate-100 hover:border-slate-300
-                dark:border-dark-600 dark:bg-dark-700/50 dark:hover:bg-dark-700 dark:hover:border-dark-500
-                transition-all duration-200 text-left group"
+              onClick={() => onSuggestionClick?.(item.prompt)}
+              className="suggestion-card group"
+              style={{ animationDelay: `${idx * 60}ms` }}
             >
-              <div className="shrink-0 w-8 h-8 rounded-lg bg-slate-200 group-hover:bg-slate-300 
-                dark:bg-dark-600 dark:group-hover:bg-dark-500 
-                flex items-center justify-center transition-colors">
-                <item.icon size={16} className="text-slate-700 dark:text-dark-200" />
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${item.accent} transition-transform group-hover:scale-105`}
+              >
+                <item.icon size={18} />
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-900 dark:text-dark-100">{item.title}</p>
-                <p className="text-xs text-slate-600 dark:text-dark-400 mt-0.5 line-clamp-2">{item.prompt}</p>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{item.title}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                  {item.prompt}
+                </p>
               </div>
             </button>
           ))}

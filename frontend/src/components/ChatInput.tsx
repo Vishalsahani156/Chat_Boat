@@ -9,7 +9,6 @@ interface ChatInputProps {
   isProcessing?: boolean;
   voiceDisabled?: boolean;
   inputDisabled?: boolean;
-  /** Fills textarea when `prefillKey` changes (welcome suggestions). */
   prefillText?: string;
   prefillKey?: number;
 }
@@ -32,7 +31,7 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
     voiceDisabled = false,
     inputDisabled = false,
     prefillText,
-    prefillKey
+    prefillKey,
   },
   forwardedRef
 ) {
@@ -72,18 +71,27 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
   };
 
   return (
-    <div className="border-t border-slate-200 bg-white dark:border-dark-700 dark:bg-dark-800 p-4 transition-colors duration-200">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-end gap-2 bg-slate-50 border border-slate-200 rounded-xl p-2 
-          dark:bg-dark-700 dark:border-dark-600 
-          focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
+    <div
+      className="shrink-0 border-t border-slate-200/80 bg-white/80 px-3 py-3 backdrop-blur-xl
+        pb-[max(0.75rem,env(safe-area-inset-bottom))]
+        dark:border-white/[0.06] dark:bg-dark-900/80 sm:px-4 sm:py-4"
+    >
+      <div className="mx-auto max-w-3xl">
+        <div
+          className={`flex items-end gap-1.5 rounded-2xl border p-1.5 transition-all duration-200 sm:gap-2 sm:rounded-3xl sm:p-2 ${
+            isListening
+              ? 'border-red-400/50 bg-red-50/50 ring-2 ring-red-500/20 dark:border-red-500/30 dark:bg-red-500/5'
+              : 'border-slate-200/80 bg-slate-50/80 focus-within:border-brand-400/60 focus-within:ring-2 focus-within:ring-brand-500/20 dark:border-white/10 dark:bg-dark-800/60 dark:focus-within:border-brand-500/40'
+          }`}
+        >
           <button
+            type="button"
             onClick={onVoiceInput}
             disabled={voiceDisabled || loading}
-            className={`shrink-0 p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`btn-icon shrink-0 !min-h-[44px] !min-w-[44px] !rounded-xl ${
               isListening || isProcessing
-                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200 dark:text-dark-400 dark:hover:text-dark-200 dark:hover:bg-dark-600'
+                ? '!bg-red-500/15 !text-red-600 dark:!text-red-400'
+                : ''
             }`}
             title={
               isProcessing
@@ -92,17 +100,18 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
                   ? 'Stop recording'
                   : 'Voice input'
             }
+            aria-label={isListening ? 'Stop recording' : 'Voice input'}
           >
             {isListening || isProcessing ? <MicOff size={20} /> : <Mic size={20} />}
           </button>
 
           <textarea
-            ref={node => {
+            ref={(node) => {
               textareaRef.current = node;
               setRef(node, forwardedRef);
             }}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={inputDisabled}
             placeholder={
@@ -110,27 +119,27 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
                 ? 'Listening… tap mic to stop'
                 : isProcessing
                   ? 'Processing voice…'
-                  : 'Type a message…'
+                  : 'Message AI Chatbot…'
             }
             rows={1}
-            className="flex-1 bg-transparent text-slate-900 placeholder:text-slate-400
-              resize-none outline-none text-sm leading-relaxed py-1.5 max-h-40
-              dark:text-dark-100 dark:placeholder:text-dark-400
-              disabled:opacity-50 disabled:cursor-not-allowed"
+            className="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent py-2.5 text-base leading-relaxed
+              text-slate-900 outline-none placeholder:text-slate-400
+              dark:text-slate-100 dark:placeholder:text-slate-500
+              disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
           />
 
           <button
+            type="button"
             onClick={handleSend}
             disabled={!input.trim() || loading || inputDisabled}
-            className="shrink-0 p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600
-              text-white disabled:opacity-40 disabled:cursor-not-allowed
-              hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
+            className="btn-primary shrink-0 !min-h-[44px] !min-w-[44px] !rounded-xl !px-0 sm:!min-w-[48px]"
+            aria-label="Send message"
           >
             {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
           </button>
         </div>
-        <p className="text-xs text-slate-500 dark:text-dark-500 text-center mt-2">
-          Enter to send · Mic for voice (any language) · Live voice in header
+        <p className="mt-2 hidden text-center text-[11px] text-slate-400 sm:block dark:text-slate-500">
+          Enter to send · Mic for voice · Live voice in header
         </p>
       </div>
     </div>

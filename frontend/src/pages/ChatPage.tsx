@@ -220,7 +220,7 @@ export default function ChatPage() {
     liveVoice.isActive;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-dark-900 transition-colors duration-200">
+    <div className="flex h-screen h-[100dvh] overflow-hidden">
       <Sidebar
         conversations={conversations}
         activeId={activeConversation}

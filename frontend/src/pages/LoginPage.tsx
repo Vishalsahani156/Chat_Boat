@@ -10,13 +10,7 @@ import {
   normalizeEmailInput,
 } from '../utils/passwordValidation';
 
-const MSG_LOGIN_SUCCESS = 'Login Successfully';
-
 type FieldKey = 'email' | 'password';
-
-function showPopup(message: string) {
-  window.alert(message);
-}
 
 export default function LoginPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
@@ -91,8 +85,7 @@ export default function LoginPage() {
 
     try {
       await login(normalizeEmailInput(email), password);
-      showPopup(MSG_LOGIN_SUCCESS);
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (err) {
       setApiError(getAuthErrorMessage(err));
     } finally {
@@ -101,25 +94,32 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4 dark:bg-dark-900">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-dark-700 dark:bg-dark-800">
+    <div className="flex min-h-screen min-h-[100dvh] items-center justify-center overflow-x-hidden p-4 sm:p-6">
+      <div className="glass-card w-full max-w-md animate-fade-in-up p-6 sm:p-8">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600">
+          <div className="relative mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand shadow-glow">
             <Sparkles size={28} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome back</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-dark-400">Sign in to your account</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back</h1>
+          <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">Sign in to continue to AI Chatbot</p>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
           {apiError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+            <div
+              className="rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-sm text-red-800
+                dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+              role="alert"
+            >
               {apiError}
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-dark-200">
+            <label
+              htmlFor="email"
+              className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
               Email
             </label>
             <input
@@ -128,14 +128,17 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => handleEmailChange(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-dark-600 dark:bg-dark-700 dark:text-white"
+              className="input-field"
               placeholder="you@example.com"
             />
             <FieldError message={showFieldError('email')} />
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-dark-200">
+            <label
+              htmlFor="password"
+              className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
               Password
             </label>
             <PasswordInput
@@ -146,18 +149,17 @@ export default function LoginPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {submitting ? 'Signing in...' : 'Sign in'}
+          <button type="submit" disabled={submitting} className="btn-primary w-full">
+            {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-600 dark:text-dark-400">
+        <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
           Don&apos;t have an account?{' '}
-          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
+          <Link
+            to="/register"
+            className="font-semibold text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+          >
             Create one
           </Link>
         </p>

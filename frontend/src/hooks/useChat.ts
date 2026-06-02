@@ -114,8 +114,9 @@ export function useChat(conversationId: string | null) {
     []
   );
 
-  const setConversationId = useCallback((id: string) => {
+  const setConversationId = useCallback((id: string | null) => {
     setActiveConversationId(id);
+    activeConversationIdRef.current = id;
   }, []);
 
   return {
