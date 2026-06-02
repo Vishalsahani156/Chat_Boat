@@ -3,6 +3,7 @@ import type { LiveVoiceStatus } from '../hooks/useLiveVoice';
 
 interface VoiceModeProps {
   status: LiveVoiceStatus;
+  disabled?: boolean;
   onStart: () => void;
   onStop: () => void;
   onEndTurn: () => void;
@@ -18,6 +19,7 @@ const STATUS_LABEL: Record<LiveVoiceStatus, string> = {
 
 export default function VoiceMode({
   status,
+  disabled = false,
   onStart,
   onStop,
   onEndTurn,
@@ -31,10 +33,12 @@ export default function VoiceMode({
         <button
           type="button"
           onClick={onStart}
+          disabled={disabled}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
             bg-purple-500/15 text-purple-700 hover:bg-purple-500/25
-            dark:text-purple-300 dark:hover:bg-purple-500/20 transition-colors"
-          title="Start live voice conversation"
+            dark:text-purple-300 dark:hover:bg-purple-500/20 transition-colors
+            disabled:opacity-50 disabled:pointer-events-none"
+          title={disabled ? 'Finish mic recording first' : 'Start live voice conversation'}
         >
           <Radio size={14} />
           Live voice

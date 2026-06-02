@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import * as sttService from "./sttService";
 import * as ttsService from "./ttsService";
 import * as geminiService from "./geminiService";
+import { prepareTextForTts } from "../utils/voiceText";
 import prisma from "../config/database";
 import { MessageHistory } from "../types";
 import { normalizeAudioMime } from "../middleware/upload";
@@ -115,7 +116,11 @@ async function processLiveSession(socket: Socket, session: LiveSession): Promise
     }));
 
     let fullReply = "";
-    for await (const chunk of geminiService.generateResponseStream(text.trim(), history)) {
+    for await (const chunk of geminiService.generateResponseStream(
+      text.trim(),
+      history,
+      "voice"
+    )) {
       if (isAborted(socketId)) return;
       fullReply += chunk;
       socket.emit("voiceTextChunk", { chunk, done: false });
@@ -146,7 +151,8 @@ async function processLiveSession(socket: Socket, session: LiveSession): Promise
       }),
     ]);
 
-    const audio = await ttsService.synthesize(fullReply, language);
+    const ttsText = prepareTextForTts(fullReply);
+    const audio = await ttsService.synthesize(ttsText, language);
     if (audio) {
       socket.emit("voiceAudioOut", {
         mimeType: audio.mimeType,

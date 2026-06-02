@@ -6,8 +6,9 @@ A full-stack AI-powered chatbot application built with React, Express, and Googl
 
 - AI-powered chatbot with Google Gemini integration
 - Real-time messaging with Socket.io
-- Push-to-talk voice (any language): record audio → Gemini STT → AI reply → server TTS playback (free Edge TTS; browser fallback if synthesis fails)
-- Live voice mode via Socket.IO (streamed text + spoken reply)
+- Push-to-talk voice (any language): record audio → **Gemini speech-to-text** (not Whisper) → voice-optimized Gemini reply → server TTS playback (free Edge TTS; browser fallback if synthesis fails)
+- Live voice mode via Socket.IO (streamed text + spoken reply, same Gemini STT + voice prompts)
+- Optional `VOICE_SINGLE_CALL=true` for push-to-talk: one Gemini request for transcribe + reply (lower latency)
 - Streaming text chat (SSE) for ChatGPT-style incremental replies
 - Chat history stored in PostgreSQL
 - User authentication (register/login), bcrypt hashed passwords, JWT for APIs and Socket.IO
@@ -241,7 +242,11 @@ The Socket.IO handshake must include a valid JWT: either `auth: { token: '<jwt>'
 |----------|-------------|---------|
 | `PORT` | Server port | `5000` |
 | `DATABASE_URL` | PostgreSQL connection string | - |
-| `GEMINI_API_KEY` | Google Gemini API key | - |
+| `GEMINI_API_KEY` | Google Gemini API key (required at startup) | - |
+| `GEMINI_MODEL` | Gemini model id | `gemini-2.5-flash-lite` |
+| `GEMINI_RETRY_MAX` | Retries on quota/rate-limit errors | `3` |
+| `VOICE_SINGLE_CALL` | Push-to-talk: one Gemini call for STT + reply | `false` |
+| `VOICE_MAX_BYTES` | Max voice upload size | `10485760` |
 | `JWT_SECRET` | Secret key for signing JWTs (required for `/api/auth` and protected routes) | - |
 | `JWT_EXPIRES_IN` | Access token lifetime (e.g. `7d`, `24h`) | `7d` |
 | `CORS_ORIGIN` | Allowed CORS origin | `http://localhost:5173` |

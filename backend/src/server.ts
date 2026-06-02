@@ -19,10 +19,11 @@ import { attachVoiceHandlers, cleanupVoiceSession } from "./services/geminiLiveS
 import { verifyAccessToken } from "./utils/jwt";
 import { isValidUuid } from "./utils/uuid";
 import { AppError } from "./middleware/errorHandler";
-import { validateAuthConfig } from "./config/env";
+import { validateAuthConfig, validateGeminiConfig } from "./config/env";
 import prisma from "./config/database";
 
 validateAuthConfig();
+validateGeminiConfig();
 
 /** Production default if CORS_ORIGIN is unset. */
 const defaultProdOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];

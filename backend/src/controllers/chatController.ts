@@ -154,7 +154,12 @@ export const voiceChat = async (
     const userId = requireUserId(req);
     const { audioText, conversationId } = req.body;
 
-    const result = await chatService.processMessage(audioText, userId, conversationId);
+    const result = await chatService.processMessage(
+      audioText,
+      userId,
+      conversationId,
+      "voice"
+    );
 
     res.status(200).json({
       success: true,

@@ -1,13 +1,14 @@
 import prisma from "../config/database";
 import { AppError } from "../middleware/errorHandler";
 import * as geminiService from "./geminiService";
+import type { ResponseMode } from "./geminiService";
 import { ChatResponse, MessageHistory } from "../types";
 
-export const processMessage = async (
+export async function resolveConversationContext(
   message: string,
   userId: string,
   conversationId?: string
-): Promise<ChatResponse> => {
+): Promise<{ convId: string; history: MessageHistory[] }> {
   let convId = conversationId;
 
   if (!convId) {
@@ -38,20 +39,26 @@ export const processMessage = async (
     content: msg.content,
   }));
 
-  const reply = await geminiService.generateResponse(message, history);
+  return { convId, history };
+}
 
+export async function persistConversationTurn(
+  convId: string,
+  userMessage: string,
+  assistantReply: string
+): Promise<void> {
   await prisma.$transaction([
     prisma.message.create({
       data: {
         role: "user",
-        content: message,
+        content: userMessage,
         conversationId: convId,
       },
     }),
     prisma.message.create({
       data: {
         role: "assistant",
-        content: reply,
+        content: assistantReply,
         conversationId: convId,
       },
     }),
@@ -61,11 +68,28 @@ export const processMessage = async (
     }),
     prisma.chat.create({
       data: {
-        userMessage: message,
-        aiReply: reply,
+        userMessage,
+        aiReply: assistantReply,
       },
     }),
   ]);
+}
+
+export const processMessage = async (
+  message: string,
+  userId: string,
+  conversationId?: string,
+  mode: ResponseMode = "text"
+): Promise<ChatResponse> => {
+  const { convId, history } = await resolveConversationContext(
+    message,
+    userId,
+    conversationId
+  );
+
+  const reply = await geminiService.generateResponse(message, history, mode);
+
+  await persistConversationTurn(convId, message, reply);
 
   return { reply, conversationId: convId };
 };

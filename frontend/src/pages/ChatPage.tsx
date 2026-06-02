@@ -235,6 +235,9 @@ export default function ChatPage() {
         isProcessing={voiceChat.isProcessing}
         isSpeaking={isSpeaking || voiceChat.isSpeaking}
         voiceDisabled={liveVoice.isActive}
+        liveVoiceDisabled={
+          voiceChat.isRecording || voiceChat.isProcessing || voiceChat.isSpeaking
+        }
         onVoiceInput={handleVoiceInput}
         onSpeak={speak}
         onStopSpeaking={() => {
@@ -242,7 +245,12 @@ export default function ChatPage() {
           voiceChat.stopSpeaking();
         }}
         liveVoiceStatus={liveVoice.status}
-        onLiveVoiceStart={() => void liveVoice.startLiveMode()}
+        onLiveVoiceStart={() => {
+          if (voiceChat.isRecording || voiceChat.isProcessing || voiceChat.isSpeaking) {
+            return;
+          }
+          void liveVoice.startLiveMode();
+        }}
         onLiveVoiceStop={() => void liveVoice.stopLiveMode()}
         onLiveVoiceEndTurn={() => void liveVoice.endLiveMode()}
         onLiveVoiceInterrupt={() => void liveVoice.interrupt()}

@@ -2,6 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppError } from "../middleware/errorHandler";
 import { MessageHistory } from "../types";
 
+export type ResponseMode = "text" | "voice";
+
 const getApiKey = (): string => {
   const key = process.env.GEMINI_API_KEY?.trim() || "";
   if (!key || key === "your-gemini-api-key" || key.includes("your-gemini")) {
@@ -126,6 +128,51 @@ async function generateContentWithBackoff(
 const SYSTEM_PROMPT =
   "You are a helpful AI assistant. Be concise and accurate. Keep responses brief unless asked for detail.";
 
+const VOICE_SYSTEM_PROMPT = `You are a helpful voice assistant in a spoken conversation.
+Rules:
+- Reply in the same language the user spoke (Hindi, English, Hinglish, or other). Do not translate unless asked.
+- Use 2 to 4 short, natural sentences suitable for listening aloud.
+- Use plain spoken language only: no markdown, bullet lists, code blocks, or symbols like * or #.
+- Be warm and conversational, like the Gemini voice experience.`;
+
+const TRANSCRIBE_INSTRUCTION = `Transcribe the spoken audio exactly as heard.
+- Support Hindi, English, Hinglish (code-switching), and other languages.
+- Do NOT translate: write what was actually spoken.
+- For mixed Hindi-English, keep the mix in the transcription.
+- Detect the primary language as ISO 639-1 (en, hi, ta, etc.).
+
+Examples of valid JSON output:
+{"text":"आज मौसम कैसा है?","language":"hi"}
+{"text":"What is the weather today?","language":"en"}
+{"text":"Aaj weather kaisa hai?","language":"hi"}
+
+Reply with JSON only, no markdown:
+{"text":"<transcription>","language":"<ISO 639-1 code>"}`;
+
+function systemPromptForMode(mode: ResponseMode): string {
+  return mode === "voice" ? VOICE_SYSTEM_PROMPT : SYSTEM_PROMPT;
+}
+
+function buildChatPrompt(
+  message: string,
+  history: MessageHistory[],
+  mode: ResponseMode
+): string {
+  const recentHistory = history.slice(-10);
+  const contextLines = recentHistory.map(
+    (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
+  );
+
+  return [
+    systemPromptForMode(mode),
+    ...(contextLines.length > 0
+      ? ["", "Previous conversation:", ...contextLines, ""]
+      : [""]),
+    `User: ${message}`,
+    "Assistant:",
+  ].join("\n");
+}
+
 function parseTranscriptionJson(raw: string): { text: string; language: string } {
   const trimmed = raw.trim();
   const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
@@ -143,6 +190,50 @@ function parseTranscriptionJson(raw: string): { text: string; language: string }
   return { text: trimmed, language: "en" };
 }
 
+function parseVoiceTurnJson(raw: string): {
+  text: string;
+  language: string;
+  reply: string;
+} {
+  const trimmed = raw.trim();
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        text?: string;
+        language?: string;
+        reply?: string;
+      };
+      return {
+        text: String(parsed.text ?? "").trim(),
+        language: String(parsed.language ?? "en").toLowerCase().slice(0, 5),
+        reply: String(parsed.reply ?? "").trim(),
+      };
+    } catch {
+      /* fall through */
+    }
+  }
+  return { text: "", language: "en", reply: trimmed };
+}
+
+function buildVoiceTurnInstruction(history: MessageHistory[]): string {
+  const recentHistory = history.slice(-10);
+  const contextLines = recentHistory.map(
+    (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
+  );
+
+  const contextBlock =
+    contextLines.length > 0
+      ? `Previous conversation:\n${contextLines.join("\n")}\n\n`
+      : "";
+
+  return `${contextBlock}Listen to the audio, transcribe it, and reply as the voice assistant.
+${VOICE_SYSTEM_PROMPT}
+
+Reply with JSON only, no markdown:
+{"text":"<exact transcription>","language":"<ISO 639-1>","reply":"<spoken reply in same language>"}`;
+}
+
 export async function transcribeAudio(
   audioBuffer: Buffer,
   mimeType: string
@@ -155,10 +246,7 @@ export async function transcribeAudio(
           data: audioBuffer.toString("base64"),
         },
       },
-      {
-        text: `Transcribe the spoken audio exactly. Detect the language automatically.
-Reply with JSON only, no markdown: {"text":"<transcription>","language":"<ISO 639-1 code e.g. en, hi, ta>"}`,
-      },
+      { text: TRANSCRIBE_INSTRUCTION },
     ]);
     return parseTranscriptionJson(response);
   } catch (error) {
@@ -167,23 +255,41 @@ Reply with JSON only, no markdown: {"text":"<transcription>","language":"<ISO 63
   }
 }
 
+export async function processVoiceTurn(
+  audioBuffer: Buffer,
+  mimeType: string,
+  history: MessageHistory[]
+): Promise<{ text: string; language: string; reply: string }> {
+  try {
+    const response = await generateContentWithBackoff([
+      {
+        inlineData: {
+          mimeType,
+          data: audioBuffer.toString("base64"),
+        },
+      },
+      { text: buildVoiceTurnInstruction(history) },
+    ]);
+    const parsed = parseVoiceTurnJson(response);
+    if (!parsed.text.trim()) {
+      throw new AppError("Could not understand audio. Please try again.", 400);
+    }
+    if (!parsed.reply.trim()) {
+      throw new Error("Empty response from Gemini");
+    }
+    return parsed;
+  } catch (error) {
+    console.error("Gemini voice turn error:", error);
+    throw toGeminiAppError(error, "Failed to process voice message. Please try again.");
+  }
+}
+
 export async function* generateResponseStream(
   message: string,
-  history: MessageHistory[]
+  history: MessageHistory[],
+  mode: ResponseMode = "text"
 ): AsyncGenerator<string> {
-  const recentHistory = history.slice(-10);
-  const contextLines = recentHistory.map(
-    (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
-  );
-
-  const prompt = [
-    SYSTEM_PROMPT,
-    ...(contextLines.length > 0
-      ? ["", "Previous conversation:", ...contextLines, ""]
-      : [""]),
-    `User: ${message}`,
-    "Assistant:",
-  ].join("\n");
+  const prompt = buildChatPrompt(message, history, mode);
 
   try {
     const streamResult = await getModel().generateContentStream(prompt);
@@ -199,24 +305,11 @@ export async function* generateResponseStream(
 
 export const generateResponse = async (
   message: string,
-  history: MessageHistory[]
+  history: MessageHistory[],
+  mode: ResponseMode = "text"
 ): Promise<string> => {
   try {
-    const recentHistory = history.slice(-10);
-
-    const contextLines = recentHistory.map(
-      (msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
-    );
-
-    const prompt = [
-      SYSTEM_PROMPT,
-      ...(contextLines.length > 0
-        ? ["", "Previous conversation:", ...contextLines, ""]
-        : [""]),
-      `User: ${message}`,
-      "Assistant:",
-    ].join("\n");
-
+    const prompt = buildChatPrompt(message, history, mode);
     const response = await generateContentWithBackoff(prompt);
 
     if (!response) {

@@ -29,6 +29,7 @@ interface ChatAreaProps {
   onLiveVoiceEndTurn: () => void;
   onLiveVoiceInterrupt: () => void;
   isLiveProcessing?: boolean;
+  liveVoiceDisabled?: boolean;
 }
 
 export default function ChatArea({
@@ -50,7 +51,8 @@ export default function ChatArea({
   onLiveVoiceStop,
   onLiveVoiceEndTurn,
   onLiveVoiceInterrupt,
-  isLiveProcessing = false
+  isLiveProcessing = false,
+  liveVoiceDisabled = false
 }: ChatAreaProps) {
   const { isDark, toggleTheme } = useThemeContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,7 @@ export default function ChatArea({
         <div className="flex items-center gap-2">
           <VoiceMode
             status={liveVoiceStatus}
+            disabled={liveVoiceDisabled}
             onStart={onLiveVoiceStart}
             onStop={onLiveVoiceStop}
             onEndTurn={onLiveVoiceEndTurn}
