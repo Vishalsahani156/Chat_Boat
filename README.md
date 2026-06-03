@@ -173,37 +173,122 @@ Running that image by itself needs a reachable `DATABASE_URL` (for example Postg
 | backend | 5000 | Express API server |
 | postgres | 5432 | PostgreSQL database |
 
-## Cloud Deployment
+## Cloud Deployment (Vercel frontend + Render backend)
 
-### Frontend on Vercel
+```
+Browser → https://your-app.vercel.app
+              ↓  vercel.json rewrites (or VITE_API_URL)
+         https://your-api.onrender.com  →  Neon PostgreSQL
+```
 
-1. Connect your GitHub repository
-2. Set root directory to `frontend`
-3. Build command: `npm run build`
-4. Output directory: `dist`
-5. Add environment variable: `VITE_API_URL` = your backend URL
+### 1. PostgreSQL (Neon recommended)
 
-### Backend on Render/Railway
+1. Create a project at [Neon](https://neon.tech) (or Supabase / Railway Postgres).
+2. Copy the **connection string** (use `?sslmode=require` if Neon requires SSL).
+3. You will set it as `DATABASE_URL` on Render.
 
-1. Connect your GitHub repository
-2. Set root directory to `backend`
-3. Build command: `npm install && npx prisma generate && npm run build`
-4. Start command: `npx prisma migrate deploy && node dist/server.js`
-5. Add environment variables:
-   - `DATABASE_URL` - PostgreSQL connection string
-   - `GEMINI_API_KEY` - Google Gemini API key
-   - `JWT_SECRET` - Long random string for JWT signing
-   - `CORS_ORIGIN` - Frontend URL (e.g., `https://your-app.vercel.app`)
-   - `PORT` - `5000`
+### 2. Backend on Render
 
-### PostgreSQL
+1. [Render Dashboard](https://dashboard.render.com) → **New +** → **Web Service** → connect your GitHub repo.
+2. Settings:
 
-Use a managed PostgreSQL provider:
-- [Neon](https://neon.tech) - Serverless Postgres
-- [Supabase](https://supabase.com) - Open source Firebase alternative
-- [Railway](https://railway.app) - Simple cloud hosting
+| Setting | Value |
+|---------|--------|
+| **Root Directory** | `backend` |
+| **Build Command** | `npm install && npx prisma generate && npm run build` |
+| **Start Command** | `npx prisma migrate deploy && node dist/server.js` |
+| **Health Check Path** | `/health` |
 
-Update `DATABASE_URL` in your backend environment with the connection string from your provider.
+3. **Environment variables** (Render → Environment):
+
+| Variable | Example / notes |
+|----------|-----------------|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | Neon connection string |
+| `GEMINI_API_KEY` | From [Google AI Studio](https://aistudio.google.com/apikey) |
+| `JWT_SECRET` | Long random string (32+ characters) |
+| `CORS_ORIGIN` | `https://your-app.vercel.app` (exact URL, no trailing `/`) |
+
+Do **not** set `PORT` on Render — Render injects it automatically.
+
+4. Deploy and note your URL, e.g. `https://ai-chatbot-api.onrender.com`.
+
+5. Verify:
+
+```bash
+curl https://YOUR-RENDER-URL.onrender.com/health
+```
+
+Expect: `{"status":"ok","geminiConfigured":true,"db":"ok",...}`
+
+> Free Render services sleep when idle; the first request after sleep can take 30–60 seconds.
+
+### 3. Frontend on Vercel
+
+1. [Vercel](https://vercel.com) → **Add New Project** → same GitHub repo.
+2. Settings:
+
+| Setting | Value |
+|---------|--------|
+| **Root Directory** | `frontend` |
+| **Build Command** | `npm run build` |
+| **Output Directory** | `dist` |
+
+3. **Connect to Render (choose one option)**
+
+#### Option A — Vercel proxy (recommended)
+
+Before deploying, edit **`frontend/vercel.json`** and replace `REPLACE_WITH_YOUR_RENDER_URL` with your Render hostname (no `https://`, no trailing slash):
+
+```json
+"destination": "https://ai-chatbot-api.onrender.com/api/:path*"
+```
+
+See `frontend/vercel.json.example` for a full sample.
+
+- Leave **`VITE_API_URL` unset** on Vercel.
+- Browser calls `https://your-app.vercel.app/api/...` and `/socket.io`; Vercel forwards to Render.
+
+#### Option B — Direct backend URL
+
+On Vercel → **Environment Variables**:
+
+| Name | Value |
+|------|--------|
+| `VITE_API_URL` | `https://YOUR-RENDER-URL.onrender.com` (no trailing slash) |
+
+- Remove or disable `vercel.json` rewrites (delete rewrites or do not commit `vercel.json`).
+- Set Render `CORS_ORIGIN` to your Vercel URL (required for browser → Render).
+
+4. Deploy Vercel and copy your site URL, e.g. `https://chat-boat.vercel.app`.
+
+5. **Update Render `CORS_ORIGIN`** to that exact Vercel URL, then redeploy the backend.
+
+### 4. Post-deploy checks
+
+| Check | How |
+|-------|-----|
+| Backend | `curl https://YOUR-RENDER-URL.onrender.com/health` |
+| Login / register | Open Vercel URL |
+| Text chat | Send a message |
+| Mic voice | Record 2–3 s → Network: `POST .../api/voice/audio` → 200 |
+| Live voice | DevTools → WS `socket.io` connected |
+
+### Troubleshooting (Vercel + Render)
+
+| Symptom | Fix |
+|---------|-----|
+| CORS error in browser | `CORS_ORIGIN` on Render = exact `https://....vercel.app` |
+| API 404 on Vercel | Fix `frontend/vercel.json` Render hostname; redeploy Vercel |
+| `db: error` on `/health` | Check `DATABASE_URL` and Neon SSL params |
+| Slow first load | Render free tier cold start |
+| Live voice fails, text OK | Ensure `/socket.io` rewrite exists in `vercel.json` (Option A) |
+
+### PostgreSQL providers
+
+- [Neon](https://neon.tech) — serverless Postgres (good with Render)
+- [Supabase](https://supabase.com)
+- [Railway](https://railway.app)
 
 ## API Endpoints
 
@@ -296,9 +381,10 @@ Optional override: set `TTS_VOICE_DEFAULT` to a specific neural voice (e.g. `en-
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | `http://localhost:5000` |
+| `VITE_DEV_API_TARGET` | Dev only: Vite proxy target for `/api` and `/socket.io` | From `backend/.env` `PORT` or `http://127.0.0.1:5000` |
+| `VITE_API_URL` | Production: direct Render/Railway origin (Option B). Unset when using `vercel.json` (Option A) | *(unset → same-origin `/api`)* |
+| `VITE_CHAT_STREAM` | Set `false` to disable SSE streaming | enabled |
 
 ## License
 
 MIT
-# Chat_Boat

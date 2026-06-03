@@ -1,6 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-
-const URL = window.location.origin;
+import { getSocketUrl } from '../config/backendUrl';
 
 let socket: Socket | null = null;
 
@@ -10,7 +9,7 @@ export function getSocket(): Socket | null {
 
 export function connectSocket(token: string): void {
   disconnectSocket();
-  socket = io(URL, {
+  socket = io(getSocketUrl(), {
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnection: true,

@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { ApiResponse, AuthResponse, AuthUser, Message, VoiceAudioResult } from '../types';
+import { apiPath, getApiBaseUrl } from '../config/backendUrl';
 
 const TOKEN_KEY = 'auth_token';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json'
   }
@@ -88,7 +89,7 @@ export async function streamMessage(
   const token = getToken();
   let response: Response;
   try {
-    response = await fetch('/api/chat/stream', {
+    response = await fetch(apiPath('/chat/stream'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
