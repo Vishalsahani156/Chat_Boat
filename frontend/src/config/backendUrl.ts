@@ -1,17 +1,18 @@
-/** Render API — used when VITE_API_URL is unset (common on Vercel if env files are ignored). */
-const PRODUCTION_BACKEND_ORIGIN = 'https://chat-hvr7.onrender.com';
+/** Injected at build time by vite.config.ts (always set for production builds). */
+declare const __APP_API_ORIGIN__: string;
 
 /**
  * Production backend origin (Render/Railway). No trailing slash.
  * Override with VITE_API_URL when deploying to a different API host.
  */
 export function getBackendOrigin(): string {
+  if (typeof __APP_API_ORIGIN__ === 'string' && __APP_API_ORIGIN__) {
+    return __APP_API_ORIGIN__;
+  }
   const raw = import.meta.env.VITE_API_URL?.trim();
   if (raw) {
-    // Strip trailing /api so VITE_API_URL=https://host.onrender.com/api does not become .../api/api/...
     return raw.replace(/\/api\/?$/, '').replace(/\/$/, '');
   }
-  if (import.meta.env.PROD) return PRODUCTION_BACKEND_ORIGIN;
   return '';
 }
 

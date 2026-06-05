@@ -45,6 +45,9 @@ function isOriginAllowed(origin: string | undefined): boolean {
     return !isProduction;
   }
 
+  // Vercel preview/production URLs — allow even if NODE_ENV is not set on Render.
+  if (vercelChatBoatOriginRegex.test(origin)) return true;
+
   if (!isProduction) {
     if (localhostDevRegex.test(origin)) return true;
     if (configured.length > 0 && configured.includes(origin)) return true;
@@ -52,9 +55,7 @@ function isOriginAllowed(origin: string | undefined): boolean {
   }
 
   const allowList = configured.length > 0 ? configured : defaultProdOrigins;
-  if (allowList.includes(origin)) return true;
-  if (vercelChatBoatOriginRegex.test(origin)) return true;
-  return false;
+  return allowList.includes(origin);
 }
 
 const app = express();
@@ -70,14 +71,17 @@ const io = new SocketIOServer(server, {
   },
 });
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      callback(null, isOriginAllowed(origin));
-    },
-    credentials: true,
-  })
-);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    callback(null, isOriginAllowed(origin));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+app.options("/api/*", cors(corsOptions));
 app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "10mb" }));

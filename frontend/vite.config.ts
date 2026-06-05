@@ -36,6 +36,8 @@ function resolveBackendDevProxyTarget(explicit?: string): string {
   return DEFAULT_BACKEND_TARGET;
 }
 
+const PRODUCTION_BACKEND_ORIGIN = 'https://chat-hvr7.onrender.com';
+
 export default defineConfig(({ mode }) => {
   const viteEnv = loadEnv(mode, __dirname, '');
   const explicit =
@@ -43,8 +45,19 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_DEV_API_TARGET?.trim();
   const apiProxyTarget = resolveBackendDevProxyTarget(explicit || undefined);
 
+  const envApi =
+    viteEnv.VITE_API_URL?.trim() ||
+    process.env.VITE_API_URL?.trim() ||
+    '';
+  const apiOrigin =
+    envApi.replace(/\/api\/?$/, '').replace(/\/$/, '') ||
+    (mode === 'production' ? PRODUCTION_BACKEND_ORIGIN : '');
+
   return {
     plugins: [react()],
+    define: {
+      __APP_API_ORIGIN__: JSON.stringify(apiOrigin),
+    },
     server: {
       port: 5173,
       proxy: {
