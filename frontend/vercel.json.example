@@ -9,7 +9,7 @@
       "destination": "https://your-service-name.onrender.com/socket.io/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api|socket\\.io).*)",
       "destination": "/index.html"
     }
   ]

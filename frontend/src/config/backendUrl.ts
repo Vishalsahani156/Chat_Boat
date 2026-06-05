@@ -5,7 +5,8 @@
 export function getBackendOrigin(): string {
   const raw = import.meta.env.VITE_API_URL?.trim();
   if (!raw) return '';
-  return raw.replace(/\/$/, '');
+  // Strip trailing /api so VITE_API_URL=https://host.onrender.com/api does not become .../api/api/...
+  return raw.replace(/\/api\/?$/, '').replace(/\/$/, '');
 }
 
 /** Axios base URL: `/api` (proxied) or `https://api.example.com/api` (direct). */
