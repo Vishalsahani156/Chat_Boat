@@ -78,6 +78,14 @@ app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "10mb" }));
 
+app.get("/", (_req, res) => {
+  res.json({
+    status: "ok",
+    service: "chat-boat-api",
+    health: "/health",
+  });
+});
+
 app.get("/health", async (_req, res) => {
   let db: "ok" | "error" = "ok";
   try {
