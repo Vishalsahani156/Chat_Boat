@@ -1,6 +1,39 @@
-# AI Chatbot - Production Ready
+# Chat Boat — AI Chatbot
 
-A full-stack AI-powered chatbot application built with React, Express, and Google Gemini. Features real-time messaging, voice interaction, persistent chat history, and containerized deployment.
+**Chat Boat** is a full-stack AI chat application — text chat, voice (mic + live mode), saved history, and user accounts — powered by **Google Gemini**, **React**, **Express**, and **PostgreSQL (Neon)**.
+
+## Live deployment
+
+| Service | Platform | URL |
+|---------|----------|-----|
+| **Frontend** | Vercel | [https://chat-boat-f9svmbfxn-hobbyplanselectkarofree.vercel.app/](https://chat-boat-f9svmbfxn-hobbyplanselectkarofree.vercel.app/) |
+| **Backend API** | Render | [https://chat-hvr7.onrender.com](https://chat-hvr7.onrender.com) |
+| **Health check** | Render | [https://chat-hvr7.onrender.com/health](https://chat-hvr7.onrender.com/health) |
+
+**How it works in production**
+
+```
+Browser  →  https://chat-boat-f9svmbfxn-hobbyplanselectkarofree.vercel.app
+                    ↓  vercel.json rewrites (/api, /socket.io)
+            https://chat-hvr7.onrender.com  →  Neon PostgreSQL
+```
+
+Open the **frontend URL** in your browser to use the app. Register or log in, then chat by text, push-to-talk mic, or Live voice mode. The Vercel site proxies API and WebSocket traffic to the Render backend so the browser stays on one origin.
+
+> **Note:** Render’s free tier sleeps when idle. The first request after sleep can take 30–60 seconds.
+
+## About the project
+
+Chat Boat behaves like a modern AI assistant:
+
+- **Text chat** — streaming replies (SSE), like ChatGPT-style typing
+- **Voice** — speak in any language; Gemini transcribes, replies, and Edge TTS reads the answer aloud
+- **Live voice** — real-time conversation over Socket.IO
+- **History** — conversations stored per user in PostgreSQL
+- **Auth** — register / login with JWT; each user sees only their own chats
+- **UI** — dark mode, mobile-friendly layout
+
+**Stack:** React + Vite + Tailwind (frontend) · Express + TypeScript + Socket.IO (backend) · Prisma + Neon Postgres (database) · Google Gemini (AI)
 
 ## Features
 
@@ -30,7 +63,7 @@ A full-stack AI-powered chatbot application built with React, Express, and Googl
 ## Project Structure
 
 ```
-ai-chatbot/
+chat-boat/
 ├── frontend/               # React + Vite application
 │   ├── src/
 │   │   ├── components/     # React components
@@ -70,7 +103,7 @@ ai-chatbot/
 
 ```bash
 git clone <repository-url>
-cd ai-chatbot
+cd Chat_boat
 ```
 
 ### 2. Backend Setup
@@ -175,10 +208,17 @@ Running that image by itself needs a reachable `DATABASE_URL` (for example Postg
 
 ## Cloud Deployment (Vercel frontend + Render backend)
 
+This project is already deployed:
+
+| | URL |
+|---|-----|
+| Frontend (Vercel) | https://chat-boat-f9svmbfxn-hobbyplanselectkarofree.vercel.app/ |
+| Backend (Render) | https://chat-hvr7.onrender.com |
+
 ```
-Browser → https://your-app.vercel.app
+Browser → https://chat-boat-f9svmbfxn-hobbyplanselectkarofree.vercel.app
               ↓  vercel.json rewrites (or VITE_API_URL)
-         https://your-api.onrender.com  →  Neon PostgreSQL
+         https://chat-hvr7.onrender.com  →  Neon PostgreSQL
 ```
 
 ### 1. PostgreSQL (Neon recommended)
@@ -211,12 +251,12 @@ Browser → https://your-app.vercel.app
 
 Do **not** set `PORT` on Render — Render injects it automatically.
 
-4. Deploy and note your URL, e.g. `https://ai-chatbot-api.onrender.com`.
+4. Deploy and note your URL (this project: `https://chat-hvr7.onrender.com`).
 
 5. Verify:
 
 ```bash
-curl https://YOUR-RENDER-URL.onrender.com/health
+curl https://chat-hvr7.onrender.com/health
 ```
 
 Expect: `{"status":"ok","geminiConfigured":true,"db":"ok",...}`
@@ -241,7 +281,7 @@ Expect: `{"status":"ok","geminiConfigured":true,"db":"ok",...}`
 Before deploying, edit **`frontend/vercel.json`** and replace `REPLACE_WITH_YOUR_RENDER_URL` with your Render hostname (no `https://`, no trailing slash):
 
 ```json
-"destination": "https://ai-chatbot-api.onrender.com/api/:path*"
+"destination": "https://chat-hvr7.onrender.com/api/:path*"
 ```
 
 See `frontend/vercel.json.example` for a full sample.
@@ -260,16 +300,16 @@ On Vercel → **Environment Variables**:
 - Remove or disable `vercel.json` rewrites (delete rewrites or do not commit `vercel.json`).
 - Set Render `CORS_ORIGIN` to your Vercel URL (required for browser → Render).
 
-4. Deploy Vercel and copy your site URL, e.g. `https://chat-boat.vercel.app`.
+4. Deploy Vercel and copy your site URL (this project: `https://chat-boat-f9svmbfxn-hobbyplanselectkarofree.vercel.app/`).
 
-5. **Update Render `CORS_ORIGIN`** to that exact Vercel URL, then redeploy the backend.
+5. **Update Render `CORS_ORIGIN`** to that exact Vercel URL, then redeploy the backend. This backend also allows `https://chat-boat*.vercel.app` preview deployments automatically.
 
 ### 4. Post-deploy checks
 
 | Check | How |
 |-------|-----|
-| Backend | `curl https://YOUR-RENDER-URL.onrender.com/health` |
-| Login / register | Open Vercel URL |
+| Backend | `curl https://chat-hvr7.onrender.com/health` |
+| Login / register | [Open live app](https://chat-boat-f9svmbfxn-hobbyplanselectkarofree.vercel.app/) |
 | Text chat | Send a message |
 | Mic voice | Record 2–3 s → Network: `POST .../api/voice/audio` → 200 |
 | Live voice | DevTools → WS `socket.io` connected |
