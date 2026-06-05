@@ -1,9 +1,10 @@
 import axios from 'axios';
+import { getNetworkErrorMessage } from './networkErrors';
 
 export function getAuthErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
     if (!err.response) {
-      return 'Cannot reach the server. Start the backend with npm run dev in the backend folder.';
+      return getNetworkErrorMessage();
     }
     const data = err.response.data as
       | { message?: string; errors?: Array<{ msg: string }> }

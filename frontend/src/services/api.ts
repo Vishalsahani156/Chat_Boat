@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { ApiResponse, AuthResponse, AuthUser, Message, VoiceAudioResult } from '../types';
 import { apiPath, getApiBaseUrl } from '../config/backendUrl';
+import { getNetworkErrorMessage } from '../utils/networkErrors';
 
 const TOKEN_KEY = 'auth_token';
 
@@ -98,9 +99,7 @@ export async function streamMessage(
       body: JSON.stringify({ message, conversationId })
     });
   } catch {
-    throw new Error(
-      'Cannot reach the server. Start the backend with npm run dev in the backend folder.'
-    );
+    throw new Error(getNetworkErrorMessage());
   }
 
   if (response.status === 401) {

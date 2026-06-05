@@ -2,11 +2,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE_WITH_YOUR_RENDER_URL.onrender.com/api/:path*"
+      "destination": "https://chat-hvr7.onrender.com/api/:path*"
     },
     {
       "source": "/socket.io/:path*",
-      "destination": "https://REPLACE_WITH_YOUR_RENDER_URL.onrender.com/socket.io/:path*"
+      "destination": "https://chat-hvr7.onrender.com/socket.io/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

@@ -1,10 +1,10 @@
 import axios from 'axios';
+import { getNetworkErrorMessage } from './networkErrors';
 
 const HINTS: Array<{ match: RegExp; message: string }> = [
   {
     match: /cannot reach the server|econnrefused|network error/i,
-    message:
-      'Cannot reach the server. Run npm run dev in the backend folder and keep port 5000 free.',
+    message: getNetworkErrorMessage(),
   },
   {
     match: /could not connect for live voice|connection lost/i,
@@ -33,11 +33,15 @@ const HINTS: Array<{ match: RegExp; message: string }> = [
   },
   {
     match: /gemini api key|invalid.*key/i,
-    message: 'Gemini API key issue on the server. Check GEMINI_API_KEY in backend/.env.',
+    message: import.meta.env.DEV
+      ? 'Gemini API key issue on the server. Check GEMINI_API_KEY in backend/.env.'
+      : 'Voice service is temporarily unavailable. Please try again later.',
   },
   {
     match: /failed to transcribe|failed to process voice/i,
-    message: 'Voice processing failed. Check backend logs and GEMINI_API_KEY.',
+    message: import.meta.env.DEV
+      ? 'Voice processing failed. Check backend logs and GEMINI_API_KEY.'
+      : 'Voice processing failed. Please try again.',
   },
 ];
 

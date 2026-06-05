@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Message } from '../types';
 import { sendMessage as apiSendMessage, streamMessage as apiStreamMessage } from '../services/api';
+import { getNetworkErrorMessage } from '../utils/networkErrors';
 
 export function useChat(conversationId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -82,7 +83,7 @@ export function useChat(conversationId: string | null) {
       let staleConversation = false;
       if (axios.isAxiosError(err)) {
         if (!err.response) {
-          message = 'Cannot reach the server. Start the backend with npm run dev in the backend folder.';
+          message = getNetworkErrorMessage();
         } else if (typeof err.response.data?.message === 'string') {
           message = err.response.data.message;
           staleConversation =
