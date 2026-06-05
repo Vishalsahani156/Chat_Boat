@@ -20,7 +20,7 @@ import { verifyAccessToken } from "./utils/jwt";
 import { isValidUuid } from "./utils/uuid";
 import { AppError } from "./middleware/errorHandler";
 import { validateAuthConfig, validateGeminiConfig, isGeminiConfigured } from "./config/env";
-import prisma from "./config/database";
+import prisma, { connectDatabase } from "./config/database";
 
 validateAuthConfig();
 validateGeminiConfig();
@@ -186,10 +186,16 @@ server.on("error", (err: NodeJS.ErrnoException) => {
   process.exit(1);
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-});
+void connectDatabase()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+    });
+  })
+  .catch(() => {
+    process.exit(1);
+  });
 
 const gracefulShutdown = (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
