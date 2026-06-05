@@ -29,11 +29,13 @@ validateGeminiConfig();
 const defaultProdOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
 const localhostDevRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+/** Vercel production + preview deployments for this project (chat-boat*.vercel.app). */
+const vercelChatBoatOriginRegex = /^https:\/\/chat-boat[\w-]*\.vercel\.app$/;
 const isProduction = process.env.NODE_ENV === "production";
 
 /**
  * In development, allow any localhost / 127.0.0.1 port so Vite can use 5174+ when 5173 is busy.
- * In production, use CORS_ORIGIN or defaultProdOrigins.
+ * In production, use CORS_ORIGIN or defaultProdOrigins, plus Vercel chat-boat preview URLs.
  */
 function isOriginAllowed(origin: string | undefined): boolean {
   const configured =
@@ -50,7 +52,9 @@ function isOriginAllowed(origin: string | undefined): boolean {
   }
 
   const allowList = configured.length > 0 ? configured : defaultProdOrigins;
-  return allowList.includes(origin);
+  if (allowList.includes(origin)) return true;
+  if (vercelChatBoatOriginRegex.test(origin)) return true;
+  return false;
 }
 
 const app = express();
