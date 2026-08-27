@@ -1,4 +1,5 @@
-import { Bot, Download, User, Volume2 } from 'lucide-react';
+import { useState } from 'react';
+import { Bot, Check, Copy, Download, User, Volume2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Message } from '../types';
 
@@ -13,11 +14,22 @@ const iconBtnClass =
   'dark:hover:bg-white/10 dark:hover:text-brand-300';
 
 export default function MessageBubble({ message, onSpeak }: MessageBubbleProps) {
+  const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
   const time = new Date(message.createdAt).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
+
+  async function copyText() {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable (e.g. insecure context) — ignore */
+    }
+  }
 
   // Print the answer via a hidden iframe (no popup → no blocker); browser "Save as PDF" makes the file.
   function downloadPdf() {
@@ -122,6 +134,15 @@ export default function MessageBubble({ message, onSpeak }: MessageBubbleProps) 
                 aria-label="Read aloud"
               >
                 <Volume2 size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={copyText}
+                className={iconBtnClass}
+                title={copied ? 'Copied!' : 'Copy text'}
+                aria-label="Copy text"
+              >
+                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
               </button>
               <button
                 type="button"
