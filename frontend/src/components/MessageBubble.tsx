@@ -7,6 +7,11 @@ interface MessageBubbleProps {
   onSpeak: (text: string) => void;
 }
 
+const iconBtnClass =
+  'inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg ' +
+  'text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand-600 ' +
+  'dark:hover:bg-white/10 dark:hover:text-brand-300';
+
 export default function MessageBubble({ message, onSpeak }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const time = new Date(message.createdAt).toLocaleTimeString([], {
@@ -14,20 +19,31 @@ export default function MessageBubble({ message, onSpeak }: MessageBubbleProps) 
     minute: '2-digit',
   });
 
-  // Open the answer in a print window; the browser's "Save as PDF" produces the file. No deps.
+  // Print the answer via a hidden iframe (no popup → no blocker); browser "Save as PDF" makes the file.
   function downloadPdf() {
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const w = window.open('', '_blank', 'width=800,height=900');
-    if (!w) return; // popup blocked
-    w.document.write(
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      iframe.remove();
+      return;
+    }
+    // Self-cleans after the print dialog closes.
+    if (iframe.contentWindow) {
+      iframe.contentWindow.onafterprint = () => iframe.remove();
+    }
+    doc.open();
+    doc.write(
       `<!doctype html><html><head><meta charset="utf-8"><title>Chat Boat answer</title>` +
         `<style>body{font:14px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;color:#1e293b;` +
         `margin:40px;white-space:pre-wrap;word-wrap:break-word}` +
         `h1{font-size:16px;color:#6d28d9;margin:0 0 20px}</style></head>` +
         `<body onload="window.focus();window.print()"><h1>Chat Boat</h1>${esc(message.content)}</body></html>`
     );
-    w.document.close();
+    doc.close();
   }
 
   return (
@@ -90,9 +106,7 @@ export default function MessageBubble({ message, onSpeak }: MessageBubbleProps) 
               <button
                 type="button"
                 onClick={() => onSpeak(message.content)}
-                className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg
-                  text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand-600
-                  dark:hover:bg-white/10 dark:hover:text-brand-300"
+                className={iconBtnClass}
                 title="Read aloud"
                 aria-label="Read aloud"
               >
@@ -101,9 +115,7 @@ export default function MessageBubble({ message, onSpeak }: MessageBubbleProps) 
               <button
                 type="button"
                 onClick={downloadPdf}
-                className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-lg
-                  text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand-600
-                  dark:hover:bg-white/10 dark:hover:text-brand-300"
+                className={iconBtnClass}
                 title="Download as PDF"
                 aria-label="Download as PDF"
               >
