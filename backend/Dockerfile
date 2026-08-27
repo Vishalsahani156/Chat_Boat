@@ -1,3 +1,4 @@
+# redeploy trigger: recover backend after failed migration deploy (804c7b3)
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
