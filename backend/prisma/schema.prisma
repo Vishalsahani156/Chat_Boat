@@ -40,7 +40,6 @@ model Message {
   id             String       @id @default(uuid())
   role           String
   content        String       @db.Text
-  image          String?      @db.Text // data: URL of a user-attached image (ponytail: inline base64; move to object storage if DB size matters)
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
