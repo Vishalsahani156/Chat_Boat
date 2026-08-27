@@ -106,6 +106,16 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
     textareaRef.current?.focus();
   };
 
+  // Close the emoji picker on Escape (outside-click is handled by the backdrop below).
+  useEffect(() => {
+    if (!showEmoji) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') setShowEmoji(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showEmoji]);
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -137,6 +147,15 @@ export default forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInpu
               <X size={16} />
             </button>
           </div>
+        )}
+
+        {showEmoji && (
+          <button
+            type="button"
+            aria-label="Close emoji picker"
+            onClick={() => setShowEmoji(false)}
+            className="fixed inset-0 z-[5] cursor-default"
+          />
         )}
 
         {showEmoji && (

@@ -31,7 +31,7 @@ const optionalConversationId = body("conversationId")
 export const validateChatMessage = [
   // Message is required only when no image is attached.
   body("message")
-    .if(body("image").not().exists())
+    .if(body("image").not().exists({ values: "null" }))
     .exists({ checkFalsy: true })
     .withMessage("Message is required")
     .isString()

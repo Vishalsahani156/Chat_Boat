@@ -34,10 +34,9 @@ export async function fileToInlineImage(
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    // Canvas unavailable — fall back to the original file's data URL.
-    const [meta, data] = sourceUrl.split(',');
-    const mimeType = meta.slice(5, meta.indexOf(';')) || file.type || 'image/png';
-    return { image: { mimeType, data }, dataUrl: sourceUrl };
+    // Canvas unavailable (rare). Sending the un-resized original could blow the API's
+    // 10 MB limit, so surface an error instead of silently defeating the size guard.
+    throw new Error('Image processing is not supported in this browser.');
   }
   ctx.drawImage(img, 0, 0, w, h);
   const outUrl = canvas.toDataURL('image/jpeg', 0.85);

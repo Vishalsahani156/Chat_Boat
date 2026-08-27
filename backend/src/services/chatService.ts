@@ -48,13 +48,15 @@ export async function resolveConversationContext(
 export async function persistConversationTurn(
   convId: string,
   userMessage: string,
-  assistantReply: string
+  assistantReply: string,
+  userImage?: string
 ): Promise<void> {
   await prisma.$transaction([
     prisma.message.create({
       data: {
         role: "user",
         content: userMessage,
+        image: userImage ?? null,
         conversationId: convId,
       },
     }),
@@ -87,6 +89,7 @@ export const processMessage = async (
 ): Promise<ChatResponse> => {
   // When only an image is sent, give the model (and the stored history) a sensible prompt.
   const text = message?.trim() || (image ? "What is in this image?" : message);
+  const imageDataUrl = image ? `data:${image.mimeType};base64,${image.data}` : undefined;
 
   const { convId, history } = await resolveConversationContext(
     text,
@@ -96,7 +99,7 @@ export const processMessage = async (
 
   const reply = await geminiService.generateResponse(text, history, mode, image);
 
-  await persistConversationTurn(convId, text, reply);
+  await persistConversationTurn(convId, text, reply, imageDataUrl);
 
   return { reply, conversationId: convId };
 };
