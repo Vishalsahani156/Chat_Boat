@@ -31,6 +31,8 @@ const defaultProdOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 const localhostDevRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 /** Vercel production + preview deployments for this project (chat-boat*.vercel.app). */
 const vercelChatBoatOriginRegex = /^https:\/\/chat-boat[\w-]*\.vercel\.app$/;
+/** Custom production domain(s) that always pass, regardless of NODE_ENV/CORS_ORIGIN. */
+const customProdOrigins = ["https://chatboat.vishalsahani.in"];
 const isProduction = process.env.NODE_ENV === "production";
 
 /**
@@ -45,8 +47,9 @@ function isOriginAllowed(origin: string | undefined): boolean {
     return !isProduction;
   }
 
-  // Vercel preview/production URLs — allow even if NODE_ENV is not set on Render.
+  // Vercel preview/production URLs + custom domain — allow even if NODE_ENV is not set on Render.
   if (vercelChatBoatOriginRegex.test(origin)) return true;
+  if (customProdOrigins.includes(origin)) return true;
 
   if (!isProduction) {
     if (localhostDevRegex.test(origin)) return true;
