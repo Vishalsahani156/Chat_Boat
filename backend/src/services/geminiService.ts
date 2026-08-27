@@ -4,6 +4,12 @@ import { MessageHistory } from "../types";
 
 export type ResponseMode = "text" | "voice";
 
+/** Optional image the user attached, for Gemini vision. */
+export interface InlineImage {
+  mimeType: string;
+  data: string; // base64, no data: prefix
+}
+
 const getApiKey = (): string => {
   const key = process.env.GEMINI_API_KEY?.trim() || "";
   if (!key || key === "your-gemini-api-key" || key.includes("your-gemini")) {
@@ -327,11 +333,15 @@ export async function* generateResponseStream(
 export const generateResponse = async (
   message: string,
   history: MessageHistory[],
-  mode: ResponseMode = "text"
+  mode: ResponseMode = "text",
+  image?: InlineImage
 ): Promise<string> => {
   try {
     const prompt = buildChatPrompt(message, history, mode);
-    const response = await generateContentWithBackoff(prompt);
+    const content = image
+      ? [{ inlineData: { mimeType: image.mimeType, data: image.data } }, { text: prompt }]
+      : prompt;
+    const response = await generateContentWithBackoff(content);
 
     if (!response) {
       throw new Error("Empty response from Gemini");

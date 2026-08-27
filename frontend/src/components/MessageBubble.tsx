@@ -77,9 +77,20 @@ export default function MessageBubble({ message, onSpeak }: MessageBubbleProps) 
           }`}
         >
           {isUser ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap sm:text-[0.9375rem]">
-              {message.content}
-            </p>
+            <>
+              {message.image && (
+                <img
+                  src={message.image}
+                  alt="attachment"
+                  className="mb-2 max-h-64 w-auto rounded-xl"
+                />
+              )}
+              {message.content && (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap sm:text-[0.9375rem]">
+                  {message.content}
+                </p>
+              )}
+            </>
           ) : (
             <div
               className="prose prose-sm max-w-none text-sm leading-relaxed text-slate-800

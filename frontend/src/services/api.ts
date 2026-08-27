@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApiResponse, AuthResponse, AuthUser, Message, VoiceAudioResult } from '../types';
+import { ApiResponse, AuthResponse, AuthUser, ImageInput, Message, VoiceAudioResult } from '../types';
 import { apiPath, getApiBaseUrl } from '../config/backendUrl';
 import { getNetworkErrorMessage } from '../utils/networkErrors';
 
@@ -74,10 +74,11 @@ export async function getMe() {
   return response.data;
 }
 
-export async function sendMessage(message: string, conversationId?: string) {
+export async function sendMessage(message: string, conversationId?: string, image?: ImageInput) {
   const response = await api.post<ApiResponse<{ reply: string; conversationId: string }>>('/chat', {
     message,
-    conversationId
+    conversationId,
+    image
   });
   return response.data;
 }

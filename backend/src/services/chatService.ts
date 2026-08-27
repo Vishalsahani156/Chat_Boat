@@ -82,17 +82,21 @@ export const processMessage = async (
   message: string,
   userId: string,
   conversationId?: string,
-  mode: ResponseMode = "text"
+  mode: ResponseMode = "text",
+  image?: geminiService.InlineImage
 ): Promise<ChatResponse> => {
+  // When only an image is sent, give the model (and the stored history) a sensible prompt.
+  const text = message?.trim() || (image ? "What is in this image?" : message);
+
   const { convId, history } = await resolveConversationContext(
-    message,
+    text,
     userId,
     conversationId
   );
 
-  const reply = await geminiService.generateResponse(message, history, mode);
+  const reply = await geminiService.generateResponse(text, history, mode, image);
 
-  await persistConversationTurn(convId, message, reply);
+  await persistConversationTurn(convId, text, reply);
 
   return { reply, conversationId: convId };
 };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Conversation } from '../types';
+import { Conversation, ImageInput } from '../types';
 import {
   getHistory,
   getConversation,
@@ -204,8 +204,8 @@ export default function ChatPage() {
     }
   }, [conversations.length, setMessages, setError]);
 
-  const handleSendMessage = useCallback(async (content: string) => {
-    const newConvId = await sendMessage(content);
+  const handleSendMessage = useCallback(async (content: string, image?: ImageInput, imagePreview?: string) => {
+    const newConvId = await sendMessage(content, image, imagePreview);
     if (newConvId) {
       void fetchHistory();
     }

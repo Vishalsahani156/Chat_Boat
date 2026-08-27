@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Menu, Moon, Sun, VolumeX, Sparkles } from 'lucide-react';
-import { Message } from '../types';
+import { ImageInput, Message } from '../types';
 import { useThemeContext } from '../context/ThemeContext';
 import type { LiveVoiceStatus } from '../hooks/useLiveVoice';
 import MessageBubble from './MessageBubble';
@@ -11,7 +11,7 @@ import VoiceMode from './VoiceMode';
 
 interface ChatAreaProps {
   messages: Message[];
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, image?: ImageInput, imagePreview?: string) => void;
   loading: boolean;
   error?: string | null;
   onToggleSidebar: () => void;

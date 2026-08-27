@@ -3,6 +3,13 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  image?: string; // data: URL, for user-attached images
+}
+
+/** Image payload sent to the API (base64, no data: prefix). */
+export interface ImageInput {
+  mimeType: string;
+  data: string;
 }
 
 export interface Conversation {

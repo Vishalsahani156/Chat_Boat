@@ -29,7 +29,9 @@ const optionalConversationId = body("conversationId")
   .withMessage("Invalid conversation ID");
 
 export const validateChatMessage = [
+  // Message is required only when no image is attached.
   body("message")
+    .if(body("image").not().exists())
     .exists({ checkFalsy: true })
     .withMessage("Message is required")
     .isString()
@@ -37,6 +39,16 @@ export const validateChatMessage = [
     .trim()
     .notEmpty()
     .withMessage("Message cannot be empty"),
+  body("image").optional().isObject().withMessage("Invalid image"),
+  body("image.mimeType")
+    .optional()
+    .matches(/^image\/(png|jpe?g|webp|gif)$/i)
+    .withMessage("Unsupported image type"),
+  body("image.data")
+    .optional()
+    .isString()
+    .isLength({ min: 1, max: 14_000_000 })
+    .withMessage("Image too large"),
   optionalConversationId,
   handleValidationErrors,
 ];

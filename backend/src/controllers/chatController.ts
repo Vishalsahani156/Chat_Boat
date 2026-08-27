@@ -17,9 +17,15 @@ export const sendMessage = async (
 ): Promise<void> => {
   try {
     const userId = requireUserId(req);
-    const { message, conversationId } = req.body;
+    const { message, conversationId, image } = req.body;
 
-    const result = await chatService.processMessage(message, userId, conversationId);
+    const result = await chatService.processMessage(
+      message,
+      userId,
+      conversationId,
+      "text",
+      image
+    );
 
     res.status(200).json({
       success: true,

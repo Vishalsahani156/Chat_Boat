@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { Message } from '../types';
+import { ImageInput, Message } from '../types';
 import { sendMessage as apiSendMessage, streamMessage as apiStreamMessage } from '../services/api';
 import { getNetworkErrorMessage } from '../utils/networkErrors';
 
@@ -19,7 +19,12 @@ export function useChat(conversationId: string | null) {
     activeConversationIdRef.current = activeConversationId;
   }, [activeConversationId]);
 
-  const sendMessage = useCallback(async (content: string, isRetry = false): Promise<string | null> => {
+  const sendMessage = useCallback(async (
+    content: string,
+    image?: ImageInput,
+    imagePreview?: string,
+    isRetry = false
+  ): Promise<string | null> => {
     setError(null);
     setLoading(true);
 
@@ -27,12 +32,14 @@ export function useChat(conversationId: string | null) {
       id: `user-${Date.now()}`,
       role: 'user',
       content,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      image: imagePreview
     };
     setMessages(prev => [...prev, userMessage]);
 
     const assistantId = `ai-${Date.now()}`;
-    const useStream = import.meta.env.VITE_CHAT_STREAM !== 'false';
+    // Image chat uses the non-streaming endpoint (SSE path is text-only).
+    const useStream = !image && import.meta.env.VITE_CHAT_STREAM !== 'false';
 
     try {
       if (useStream) {
@@ -65,7 +72,7 @@ export function useChat(conversationId: string | null) {
         return null;
       }
 
-      const response = await apiSendMessage(content, activeConversationIdRef.current || undefined);
+      const response = await apiSendMessage(content, activeConversationIdRef.current || undefined, image);
       if (response.success) {
         const aiMessage: Message = {
           id: assistantId,
@@ -97,7 +104,7 @@ export function useChat(conversationId: string | null) {
         activeConversationIdRef.current = null;
         setError(null);
         setMessages(prev => prev.filter(m => m.id !== userMessage.id && m.id !== assistantId));
-        return sendMessage(content, true);
+        return sendMessage(content, image, imagePreview, true);
       }
       setError(message);
       setMessages(prev => prev.filter(m => m.id !== assistantId));
